@@ -150,10 +150,7 @@ def func_htg_cop_futurehp(temp_c):
     cop_base, cr_base = _calculate_cop_base_cr_base(temp_c, "futurehp")
 
     adv_cop = func_htg_cop_advperfhp(temp_c)
-    cop_final = [
-        cop_base[i] if cop_base[i] >= adv_cop[i] else adv_cop[i]
-        for i in range(len(cop_base))
-    ]
+    cop_final = [max(cop_base[i], adv_cop[i]) for i in range(len(cop_base))]
     return cop_final
 
 
