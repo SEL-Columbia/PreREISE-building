@@ -75,9 +75,9 @@ state_list = [
 # (a) 50th percentile NEEP CCHP database [midperfhp],
 # (b) 90th percentile NEEP CCHP database [advperfhp],
 # (c) future HP targets, average of residential and commercial targets [futurehp]
-hp_param = pd.read_csv("reference_files/hp_parameters.csv")
-puma_data = pd.read_csv("reference_files/puma_data.csv")
-puma_slopes = pd.read_csv("reference_files/puma_slopes_{}.csv".format(bldg_class))
+hp_param = pd.read_csv("data/hp_parameters.csv")
+puma_data = pd.read_csv("data/puma_data.csv")
+puma_slopes = pd.read_csv("data/puma_slopes_{}.csv".format(bldg_class))
 
 
 # midperfhp
