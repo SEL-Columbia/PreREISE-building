@@ -108,7 +108,7 @@ def func_htg_cop_midperfhp(temp_c):
             cop_base[i] = ((COP1 - COP2) / (T1_K - T2_K)) * temp_k[i] + (
                 COP2 * T1_K - COP1 * T2_K
             ) / (T1_K - T2_K)
-        if temp_k[i] > T3_K and temp_k[i] <= T2_K:
+        if T3_K < temp_k[i] <= T2_K:
             cop_base[i] = ((COP2 - COP3) / (T2_K - T3_K)) * temp_k[i] + (
                 COP3 * T2_K - COP2 * T3_K
             ) / (T2_K - T3_K)
@@ -156,7 +156,7 @@ def func_htg_cop_advperfhp(temp_c):
             cop_base[i] = ((COP1 - COP2) / (T1_K - T2_K)) * temp_k[i] + (
                 COP2 * T1_K - COP1 * T2_K
             ) / (T1_K - T2_K)
-        if temp_k[i] > T3_K and temp_k[i] <= T2_K:
+        if T3_K < temp_k[i] <= T2_K:
             cop_base[i] = ((COP2 - COP3) / (T2_K - T3_K)) * temp_k[i] + (
                 COP3 * T2_K - COP2 * T3_K
             ) / (T2_K - T3_K)
@@ -204,7 +204,7 @@ def func_htg_cop_futurehp(temp_c):
             cop_base[i] = ((COP1 - COP2) / (T1_K - T2_K)) * temp_k[i] + (
                 COP2 * T1_K - COP1 * T2_K
             ) / (T1_K - T2_K)
-        if temp_k[i] > T3_K and temp_k[i] <= T2_K:
+        if T3_K < temp_k[i] <= T2_K:
             cop_base[i] = ((COP2 - COP3) / (T2_K - T3_K)) * temp_k[i] + (
                 COP3 * T2_K - COP2 * T3_K
             ) / (T2_K - T3_K)
