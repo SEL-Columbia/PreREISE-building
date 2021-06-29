@@ -79,7 +79,7 @@ dir_path = os.path.dirname(os.path.abspath(__file__))
 hp_param = pd.read_csv(os.path.join(dir_path, "data", "hp_parameters.csv"))
 puma_data = pd.read_csv(os.path.join(dir_path, "data", "puma_data.csv"))
 puma_slopes = pd.read_csv(
-    os.path.join(dir_path, "data", "puma_slopes_{}.csv".format(bldg_class))
+    os.path.join(dir_path, "data", f"puma_slopes_{bldg_class}.csv")
 )
 
 
@@ -237,16 +237,14 @@ for s in range(len(state_list)):
     # Load and subset relevant data for the state
     puma_data_it = puma_data[puma_data["state"] == state_it].reset_index()
     puma_slopes_it = puma_slopes[puma_slopes["state"] == state_it].reset_index()
-    # temps_pumas_it = pd.read_csv("temps_pumas/temps_pumas_{}_{}.csv".format(state_it,yr_temps))
+
     temps_pumas_it = pd.read_csv(
-        "https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{}_{}.csv".format(
-            state_it, yr_temps
-        )
+        f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state_it}_{yr_temps}.csv"
     )
     temps_pumas_transpose_it = temps_pumas_it.T
 
     # Load HP function
-    func_htg_cop = globals()["func_htg_cop_{}".format(hp_model)]
+    func_htg_cop = globals()[f"func_htg_cop_{hp_model}"]
 
     # Compute electric HP loads from fossil fuel conversion
     elec_htg_ff2hp_puma_mw_it_ref_temp = temps_pumas_transpose_it.applymap(
@@ -267,9 +265,9 @@ for s in range(len(state_list)):
     )
 
     pumalist = [
-        puma_slopes_it["htg_slope_{}_btu_m2_degC".format(bldg_class)][i]
-        * puma_data_it["{}_area_2010_m2".format(bldg_class)][i]
-        * puma_data_it["frac_ff_sh_{}_2010".format(bldg_class)][i]
+        puma_slopes_it[f"htg_slope_{bldg_class}_btu_m2_degC"][i]
+        * puma_data_it[f"{bldg_class}_area_2010_m2"][i]
+        * puma_data_it[f"frac_ff_sh_{bldg_class}_2010"][i]
         * (293.0711 / (10 ** 6) / 1000)
         for i in range(len(puma_data_it))
     ]
@@ -282,16 +280,12 @@ for s in range(len(state_list)):
     # Export profile file as CSV
     if os.path.exists("Profiles/"):
         elec_htg_ff2hp_puma_mw_it.to_csv(
-            "Profiles/elec_htg_ff2hp_{}_{}_{}_{}_mw.csv".format(
-                bldg_class, state_it, yr_temps, hp_model
-            ),
+            f"Profiles/elec_htg_ff2hp_{bldg_class}_{state_it}_{yr_temps}_{hp_model}_mw.csv",
             index=False,
         )
     else:
         os.makedirs("Profiles/")
         elec_htg_ff2hp_puma_mw_it.to_csv(
-            "Profiles/elec_htg_ff2hp_{}_{}_{}_{}_mw.csv".format(
-                bldg_class, state_it, yr_temps, hp_model
-            ),
+            f"Profiles/elec_htg_ff2hp_{bldg_class}_{state_it}_{yr_temps}_{hp_model}_mw.csv",
             index=False,
         )
