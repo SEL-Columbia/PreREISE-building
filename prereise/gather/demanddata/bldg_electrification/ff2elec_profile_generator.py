@@ -88,17 +88,17 @@ def calculate_cop(temp_c, model):
     cop_base = [0] * len(temp_c)
     cr_base = [0] * len(temp_c)
 
-    pars = hp_param[hp_param["model"] == model].T
-    T1_K = pars.iloc[3, 0]  # noqa: N806
-    COP1 = pars.iloc[4, 0]  # noqa: N806
-    T2_K = pars.iloc[8, 0]  # noqa: N806
-    COP2 = pars.iloc[9, 0]  # noqa: N806
-    T3_K = pars.iloc[13, 0]  # noqa: N806
-    COP3 = pars.iloc[14, 0]  # noqa: N806
-    CR3 = pars.iloc[15, 0]  # noqa: N806
-    a = pars.iloc[16, 0]
-    b = pars.iloc[17, 0]
-    c = pars.iloc[18, 0]
+    model_params = hp_param.set_index("model").loc[model]
+    T1_K = model_params.loc["T1_K"]  # noqa: N806
+    COP1 = model_params.loc["COP1"]  # noqa: N806
+    T2_K = model_params.loc["T2_K"]  # noqa: N806
+    COP2 = model_params.loc["COP2"]  # noqa: N806
+    T3_K = model_params.loc["T3_K"]  # noqa: N806
+    COP3 = model_params.loc["COP3"]  # noqa: N806
+    CR3 = model_params.loc["CR3"]  # noqa: N806
+    a = model_params.loc["a"]
+    b = model_params.loc["b"]
+    c = model_params.loc["c"]
 
     for i in range(len(temp_k)):
         if temp_k[i] + b > 0:
