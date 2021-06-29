@@ -1,21 +1,25 @@
-# This script creates time series for electricity loads from converting fossil fuel heating to electric heat pumps
-
-### User inputs ###
-yr_temps = (
-    2016  # Year for which temperatures are used to compute loads; options are 2008-2017
-)
-bldg_class = "res"  # Building class for loads; options are (1) reidential ["res"] or (2) commercial ["com"]
-hp_model = "advperfhp"  # Heat pump model to use. Options are (1) mid-performance cold climate heat pump ["midperfhp"], (2) advanced performance cold climate heat pump ["advperfhp"],(3) future performance heat pump ["futurehp"]
-###################
-
-# Import libraries
 import os
 
 import numpy as np
 import pandas as pd
 
+# This script creates time series for electricity loads from converting fossil fuel heating to electric heat pumps
+
+# User inputs
+# Year for which temperatures are used to compute loads; options are 2008-2017
+yr_temps = 2016
+
+# Building class for loads; options are (1) reidential ["res"] or (2) commercial ["com"]
+bldg_class = "res"
+
+# Heat pump model to use. Options are:
+# (1) mid-performance cold climate heat pump ["midperfhp"],
+# (2) advanced performance cold climate heat pump ["advperfhp"],
+# (3) future performance heat pump ["futurehp"]
+hp_model = "advperfhp"
+
 # Basic info and input files
-## Lists
+# Lists
 state_list = [
     "AL",
     "AZ",
@@ -68,27 +72,29 @@ state_list = [
     "WY",
 ]
 # COP and capacity ratio models based on:
-## (a) 50th percentile NEEP CCHP database [midperfhp], (b) 90th percentile NEEP CCHP database [advperfhp], (c) future HP targets, average of residential and commercial targets [futurehp]
+# (a) 50th percentile NEEP CCHP database [midperfhp],
+# (b) 90th percentile NEEP CCHP database [advperfhp],
+# (c) future HP targets, average of residential and commercial targets [futurehp]
 hp_param = pd.read_csv("reference_files/hp_parameters.csv")
 puma_data = pd.read_csv("reference_files/puma_data.csv")
 puma_slopes = pd.read_csv("reference_files/puma_slopes_{}.csv".format(bldg_class))
 
-### midperfhp
+
+# midperfhp
 def func_htg_cop_midperfhp(temp_c):
     temp_k = [i + 273.15 for i in temp_c]
     cop = [0] * len(temp_c)
     cop_base = [0] * len(temp_c)
     cr_base = [0] * len(temp_c)
-    eaux_base = [0] * len(temp_c)
 
     pars = hp_param[hp_param["model"] == "midperfhp"].T
-    T1_K = pars.iloc[3, 0]
-    COP1 = pars.iloc[4, 0]
-    T2_K = pars.iloc[8, 0]
-    COP2 = pars.iloc[9, 0]
-    T3_K = pars.iloc[13, 0]
-    COP3 = pars.iloc[14, 0]
-    CR3 = pars.iloc[15, 0]
+    T1_K = pars.iloc[3, 0]  # noqa: N806
+    COP1 = pars.iloc[4, 0]  # noqa: N806
+    T2_K = pars.iloc[8, 0]  # noqa: N806
+    COP2 = pars.iloc[9, 0]  # noqa: N806
+    T3_K = pars.iloc[13, 0]  # noqa: N806
+    COP3 = pars.iloc[14, 0]  # noqa: N806
+    CR3 = pars.iloc[15, 0]  # noqa: N806
     a = pars.iloc[16, 0]
     b = pars.iloc[17, 0]
     c = pars.iloc[18, 0]
@@ -122,22 +128,21 @@ def func_htg_cop_midperfhp(temp_c):
     return cop
 
 
-### advperfhp
+# advperfhp
 def func_htg_cop_advperfhp(temp_c):
     temp_k = [i + 273.15 for i in temp_c]
     cop = [0] * len(temp_c)
     cop_base = [0] * len(temp_c)
     cr_base = [0] * len(temp_c)
-    eaux_base = [0] * len(temp_c)
 
     pars = hp_param[hp_param["model"] == "advperfhp"].T
-    T1_K = pars.iloc[3, 0]
-    COP1 = pars.iloc[4, 0]
-    T2_K = pars.iloc[8, 0]
-    COP2 = pars.iloc[9, 0]
-    T3_K = pars.iloc[13, 0]
-    COP3 = pars.iloc[14, 0]
-    CR3 = pars.iloc[15, 0]
+    T1_K = pars.iloc[3, 0]  # noqa: N806
+    COP1 = pars.iloc[4, 0]  # noqa: N806
+    T2_K = pars.iloc[8, 0]  # noqa: N806
+    COP2 = pars.iloc[9, 0]  # noqa: N806
+    T3_K = pars.iloc[13, 0]  # noqa: N806
+    COP3 = pars.iloc[14, 0]  # noqa: N806
+    CR3 = pars.iloc[15, 0]  # noqa: N806
     a = pars.iloc[16, 0]
     b = pars.iloc[17, 0]
     c = pars.iloc[18, 0]
@@ -172,22 +177,20 @@ def func_htg_cop_advperfhp(temp_c):
     return cop
 
 
-### futurehp
+# futurehp
 def func_htg_cop_futurehp(temp_c):
     temp_k = [i + 273.15 for i in temp_c]
-    cop = [0] * len(temp_c)
     cop_base = [0] * len(temp_c)
     cr_base = [0] * len(temp_c)
-    eaux_base = [0] * len(temp_c)
 
     pars = hp_param[hp_param["model"] == "futurehp"].T
-    T1_K = pars.iloc[3, 0]
-    COP1 = pars.iloc[4, 0]
-    T2_K = pars.iloc[8, 0]
-    COP2 = pars.iloc[9, 0]
-    T3_K = pars.iloc[13, 0]
-    COP3 = pars.iloc[14, 0]
-    CR3 = pars.iloc[15, 0]
+    T1_K = pars.iloc[3, 0]  # noqa: N806
+    COP1 = pars.iloc[4, 0]  # noqa: N806
+    T2_K = pars.iloc[8, 0]  # noqa: N806
+    COP2 = pars.iloc[9, 0]  # noqa: N806
+    T3_K = pars.iloc[13, 0]  # noqa: N806
+    COP3 = pars.iloc[14, 0]  # noqa: N806
+    CR3 = pars.iloc[15, 0]  # noqa: N806
     a = pars.iloc[16, 0]
     b = pars.iloc[17, 0]
     c = pars.iloc[18, 0]
@@ -206,19 +209,6 @@ def func_htg_cop_futurehp(temp_c):
             ) / (T2_K - T3_K)
         if temp_k[i] <= T3_K:
             cop_base[i] = (cr_base[i] / CR3) * COP3
-
-    eaux = [0.75 - i if 0.75 - i >= 0 else 0 for i in cr_base]
-
-    sumlist = [
-        (cr_base[i] + eaux[i]) / (cr_base[i] / cop_base[i] + eaux[i])
-        if cr_base[i] != 0
-        else 1
-        for i in range(len(cr_base))
-    ]
-    cop = [
-        1 if cr_base[i] == 0 else (1 if sumlist[i] < 1 else sumlist[i])
-        for i in range(len(cr_base))
-    ]
 
     adv_cop = func_htg_cop_advperfhp(temp_c)
     cop_final = [
