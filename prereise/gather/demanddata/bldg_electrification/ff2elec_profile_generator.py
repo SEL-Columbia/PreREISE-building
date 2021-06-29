@@ -118,18 +118,18 @@ def _calculate_cop_base_cr_base(temp_c, model):
     b = model_params.loc["b"]
     c = model_params.loc["c"]
 
-    for i in range(len(temp_k)):
-        if temp_k[i] + b > 0:
-            cr_base[i] = a * np.log(temp_k[i]) + c
-        if temp_k[i] > T2_K:
-            cop_base[i] = ((COP1 - COP2) / (T1_K - T2_K)) * temp_k[i] + (
+    for i, temp in enumerate(temp_k):
+        if temp + b > 0:
+            cr_base[i] = a * np.log(temp) + c
+        if temp > T2_K:
+            cop_base[i] = ((COP1 - COP2) / (T1_K - T2_K)) * temp + (
                 COP2 * T1_K - COP1 * T2_K
             ) / (T1_K - T2_K)
-        if T3_K < temp_k[i] <= T2_K:
-            cop_base[i] = ((COP2 - COP3) / (T2_K - T3_K)) * temp_k[i] + (
+        if T3_K < temp <= T2_K:
+            cop_base[i] = ((COP2 - COP3) / (T2_K - T3_K)) * temp + (
                 COP3 * T2_K - COP2 * T3_K
             ) / (T2_K - T3_K)
-        if temp_k[i] <= T3_K:
+        if temp <= T3_K:
             cop_base[i] = (cr_base[i] / CR3) * COP3
 
     return cop_base, cr_base
