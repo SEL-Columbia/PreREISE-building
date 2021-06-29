@@ -86,7 +86,6 @@ puma_slopes = pd.read_csv(
 # midperfhp
 def func_htg_cop_midperfhp(temp_c):
     temp_k = [i + 273.15 for i in temp_c]
-    cop = [0] * len(temp_c)
     cop_base = [0] * len(temp_c)
     cr_base = [0] * len(temp_c)
 
@@ -134,7 +133,6 @@ def func_htg_cop_midperfhp(temp_c):
 # advperfhp
 def func_htg_cop_advperfhp(temp_c):
     temp_k = [i + 273.15 for i in temp_c]
-    cop = [0] * len(temp_c)
     cop_base = [0] * len(temp_c)
     cr_base = [0] * len(temp_c)
 
