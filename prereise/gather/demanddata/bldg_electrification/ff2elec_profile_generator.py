@@ -278,14 +278,8 @@ for s in range(len(state_list)):
     elec_htg_ff2hp_puma_mw_it.columns = temps_pumas_it.columns
 
     # Export profile file as CSV
-    if os.path.exists("Profiles/"):
-        elec_htg_ff2hp_puma_mw_it.to_csv(
-            f"Profiles/elec_htg_ff2hp_{bldg_class}_{state_it}_{yr_temps}_{hp_model}_mw.csv",
-            index=False,
-        )
-    else:
-        os.makedirs("Profiles/")
-        elec_htg_ff2hp_puma_mw_it.to_csv(
-            f"Profiles/elec_htg_ff2hp_{bldg_class}_{state_it}_{yr_temps}_{hp_model}_mw.csv",
-            index=False,
-        )
+    os.makedirs("Profiles", exist_ok=True)
+    elec_htg_ff2hp_puma_mw_it.to_csv(
+        f"Profiles/elec_htg_ff2hp_{bldg_class}_{state_it}_{yr_temps}_{hp_model}_mw.csv",
+        index=False,
+    )
