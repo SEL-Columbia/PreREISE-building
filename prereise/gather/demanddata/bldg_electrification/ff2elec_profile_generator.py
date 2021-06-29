@@ -94,10 +94,7 @@ def calculate_cop(temp_c, model):
         else 1
         for i in range(len(cr_base))
     ]
-    cop = [
-        1 if cr_base[i] == 0 else (1 if sumlist[i] < 1 else sumlist[i])
-        for i in range(len(cr_base))
-    ]
+    cop = [1 if cr_base[i] == 0 else max(sumlist[i], 1) for i in range(len(cr_base))]
     return cop
 
 
