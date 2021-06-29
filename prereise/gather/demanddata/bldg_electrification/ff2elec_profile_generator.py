@@ -84,6 +84,24 @@ puma_slopes = pd.read_csv(
 
 
 def calculate_cop(temp_c, model):
+    cop_base, cr_base = _calculate_cop_base_cr_base(temp_c, model)
+
+    eaux = [0.75 - i if 0.75 - i >= 0 else 0 for i in cr_base]
+
+    sumlist = [
+        (cr_base[i] + eaux[i]) / (cr_base[i] / cop_base[i] + eaux[i])
+        if cr_base[i] != 0
+        else 1
+        for i in range(len(cr_base))
+    ]
+    cop = [
+        1 if cr_base[i] == 0 else (1 if sumlist[i] < 1 else sumlist[i])
+        for i in range(len(cr_base))
+    ]
+    return cop
+
+
+def _calculate_cop_base_cr_base(temp_c, model):
     temp_k = [i + 273.15 for i in temp_c]
     cop_base = [0] * len(temp_c)
     cr_base = [0] * len(temp_c)
@@ -114,19 +132,7 @@ def calculate_cop(temp_c, model):
         if temp_k[i] <= T3_K:
             cop_base[i] = (cr_base[i] / CR3) * COP3
 
-    eaux = [0.75 - i if 0.75 - i >= 0 else 0 for i in cr_base]
-
-    sumlist = [
-        (cr_base[i] + eaux[i]) / (cr_base[i] / cop_base[i] + eaux[i])
-        if cr_base[i] != 0
-        else 1
-        for i in range(len(cr_base))
-    ]
-    cop = [
-        1 if cr_base[i] == 0 else (1 if sumlist[i] < 1 else sumlist[i])
-        for i in range(len(cr_base))
-    ]
-    return cop
+    return cop_base, cr_base
 
 
 # midperfhp
@@ -141,36 +147,7 @@ def func_htg_cop_advperfhp(temp_c):
 
 # futurehp
 def func_htg_cop_futurehp(temp_c):
-    temp_k = [i + 273.15 for i in temp_c]
-    cop_base = [0] * len(temp_c)
-    cr_base = [0] * len(temp_c)
-
-    pars = hp_param[hp_param["model"] == "futurehp"].T
-    T1_K = pars.iloc[3, 0]  # noqa: N806
-    COP1 = pars.iloc[4, 0]  # noqa: N806
-    T2_K = pars.iloc[8, 0]  # noqa: N806
-    COP2 = pars.iloc[9, 0]  # noqa: N806
-    T3_K = pars.iloc[13, 0]  # noqa: N806
-    COP3 = pars.iloc[14, 0]  # noqa: N806
-    CR3 = pars.iloc[15, 0]  # noqa: N806
-    a = pars.iloc[16, 0]
-    b = pars.iloc[17, 0]
-    c = pars.iloc[18, 0]
-
-    for i in range(len(temp_k)):
-        if temp_k[i] + b > 0:
-            cr_base[i] = a * np.log(temp_k[i]) + c
-
-        if temp_k[i] > T2_K:
-            cop_base[i] = ((COP1 - COP2) / (T1_K - T2_K)) * temp_k[i] + (
-                COP2 * T1_K - COP1 * T2_K
-            ) / (T1_K - T2_K)
-        if T3_K < temp_k[i] <= T2_K:
-            cop_base[i] = ((COP2 - COP3) / (T2_K - T3_K)) * temp_k[i] + (
-                COP3 * T2_K - COP2 * T3_K
-            ) / (T2_K - T3_K)
-        if temp_k[i] <= T3_K:
-            cop_base[i] = (cr_base[i] / CR3) * COP3
+    cop_base, cr_base = _calculate_cop_base_cr_base(temp_c, "futurehp")
 
     adv_cop = func_htg_cop_advperfhp(temp_c)
     cop_final = [
