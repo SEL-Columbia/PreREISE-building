@@ -86,7 +86,7 @@ puma_slopes = pd.read_csv(
 def calculate_cop(temp_c, model):
     cop_base, cr_base = _calculate_cop_base_cr_base(temp_c, model)
 
-    eaux = [0.75 - i if 0.75 - i >= 0 else 0 for i in cr_base]
+    eaux = [max(0.75 - i, 0) for i in cr_base]
 
     sumlist = [
         (cr_base[i] + eaux[i]) / (cr_base[i] / cop_base[i] + eaux[i])
