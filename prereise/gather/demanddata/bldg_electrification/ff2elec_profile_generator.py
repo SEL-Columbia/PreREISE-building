@@ -160,56 +160,61 @@ if bldg_class == "com":
 else:
     temp_ref_it = temp_ref_res
 
-# Loop through states to create profile outputs
-for s in range(len(state_list)):
-    state_it = state_list[s]
 
-    # Load and subset relevant data for the state
-    puma_data_it = puma_data[puma_data["state"] == state_it].reset_index()
-    puma_slopes_it = puma_slopes[puma_slopes["state"] == state_it].reset_index()
+def main():
+    # Loop through states to create profile outputs
+    for s in range(len(state_list)):
+        state_it = state_list[s]
 
-    temps_pumas_it = pd.read_csv(
-        f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state_it}_{yr_temps}.csv"
-    )
-    temps_pumas_transpose_it = temps_pumas_it.T
+        # Load and subset relevant data for the state
+        puma_data_it = puma_data[puma_data["state"] == state_it].reset_index()
+        puma_slopes_it = puma_slopes[puma_slopes["state"] == state_it].reset_index()
 
-    # Load HP function
-    func_htg_cop = globals()[f"func_htg_cop_{hp_model}"]
+        temps_pumas_it = pd.read_csv(
+            f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state_it}_{yr_temps}.csv"
+        )
+        temps_pumas_transpose_it = temps_pumas_it.T
 
-    # Compute electric HP loads from fossil fuel conversion
-    elec_htg_ff2hp_puma_mw_it_ref_temp = temps_pumas_transpose_it.applymap(
-        lambda x: temp_ref_it - x if temp_ref_it - x >= 0 else 0
-    )
-    elec_htg_ff2hp_puma_mw_it_func = temps_pumas_transpose_it.apply(
-        lambda x: np.reciprocal(func_htg_cop(x)), 1
-    )
-    elec_htg_ff2hp_puma_mw_it_func = pd.DataFrame(
-        elec_htg_ff2hp_puma_mw_it_func.to_list()
-    )
-    elec_htg_ff2hp_puma_mw_it_func.index = list(
-        elec_htg_ff2hp_puma_mw_it_ref_temp.index
-    )
+        # Load HP function
+        func_htg_cop = globals()[f"func_htg_cop_{hp_model}"]
 
-    elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it_ref_temp.multiply(
-        elec_htg_ff2hp_puma_mw_it_func
-    )
+        # Compute electric HP loads from fossil fuel conversion
+        elec_htg_ff2hp_puma_mw_it_ref_temp = temps_pumas_transpose_it.applymap(
+            lambda x: temp_ref_it - x if temp_ref_it - x >= 0 else 0
+        )
+        elec_htg_ff2hp_puma_mw_it_func = temps_pumas_transpose_it.apply(
+            lambda x: np.reciprocal(func_htg_cop(x)), 1
+        )
+        elec_htg_ff2hp_puma_mw_it_func = pd.DataFrame(
+            elec_htg_ff2hp_puma_mw_it_func.to_list()
+        )
+        elec_htg_ff2hp_puma_mw_it_func.index = list(
+            elec_htg_ff2hp_puma_mw_it_ref_temp.index
+        )
 
-    pumalist = [
-        puma_slopes_it[f"htg_slope_{bldg_class}_btu_m2_degC"][i]
-        * puma_data_it[f"{bldg_class}_area_2010_m2"][i]
-        * puma_data_it[f"frac_ff_sh_{bldg_class}_2010"][i]
-        * (293.0711 / (10 ** 6) / 1000)
-        for i in range(len(puma_data_it))
-    ]
+        elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it_ref_temp.multiply(
+            elec_htg_ff2hp_puma_mw_it_func
+        )
 
-    elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.mul(pumalist, axis=0)
-    elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.T
+        pumalist = [
+            puma_slopes_it[f"htg_slope_{bldg_class}_btu_m2_degC"][i]
+            * puma_data_it[f"{bldg_class}_area_2010_m2"][i]
+            * puma_data_it[f"frac_ff_sh_{bldg_class}_2010"][i]
+            * (293.0711 / (10 ** 6) / 1000)
+            for i in range(len(puma_data_it))
+        ]
 
-    elec_htg_ff2hp_puma_mw_it.columns = temps_pumas_it.columns
+        elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.mul(pumalist, axis=0)
+        elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.T
 
-    # Export profile file as CSV
-    os.makedirs("Profiles", exist_ok=True)
-    elec_htg_ff2hp_puma_mw_it.to_csv(
-        f"Profiles/elec_htg_ff2hp_{bldg_class}_{state_it}_{yr_temps}_{hp_model}_mw.csv",
-        index=False,
-    )
+        elec_htg_ff2hp_puma_mw_it.columns = temps_pumas_it.columns
+
+        # Export profile file as CSV
+        os.makedirs("Profiles", exist_ok=True)
+        elec_htg_ff2hp_puma_mw_it.to_csv(
+            f"Profiles/elec_htg_ff2hp_{bldg_class}_{state_it}_{yr_temps}_{hp_model}_mw.csv",
+            index=False,
+        )
+
+
+main()
