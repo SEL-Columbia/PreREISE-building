@@ -5,19 +5,6 @@ import pandas as pd
 
 # This script creates time series for electricity loads from converting fossil fuel heating to electric heat pumps
 
-# User inputs
-# Year for which temperatures are used to compute loads; options are 2008-2017
-yr_temps = 2016
-
-# Building class for loads; options are (1) reidential ["res"] or (2) commercial ["com"]
-bldg_class = "res"
-
-# Heat pump model to use. Options are:
-# (1) mid-performance cold climate heat pump ["midperfhp"],
-# (2) advanced performance cold climate heat pump ["advperfhp"],
-# (3) future performance heat pump ["futurehp"]
-hp_model = "advperfhp"
-
 # Basic info and input files
 # Lists
 state_list = [
@@ -78,9 +65,6 @@ state_list = [
 dir_path = os.path.dirname(os.path.abspath(__file__))
 hp_param = pd.read_csv(os.path.join(dir_path, "data", "hp_parameters.csv"))
 puma_data = pd.read_csv(os.path.join(dir_path, "data", "puma_data.csv"))
-puma_slopes = pd.read_csv(
-    os.path.join(dir_path, "data", f"puma_slopes_{bldg_class}.csv")
-)
 
 
 def calculate_cop(temp_c, model):
@@ -155,11 +139,6 @@ def func_htg_cop_futurehp(temp_c):
 temp_ref_res = 18.3
 temp_ref_com = 16.7
 
-if bldg_class == "com":
-    temp_ref_it = temp_ref_com
-else:
-    temp_ref_it = temp_ref_res
-
 
 def main():
     # Loop through states to create profile outputs
@@ -217,4 +196,27 @@ def main():
         )
 
 
-main()
+if __name__ == "__main__":
+    # User inputs
+    # Year for which temperatures are used to compute loads; options are 2008-2017
+    yr_temps = 2016
+
+    # Building class for loads; options are (1) reidential ["res"] or (2) commercial ["com"]
+    bldg_class = "res"
+
+    # Heat pump model to use. Options are:
+    # (1) mid-performance cold climate heat pump ["midperfhp"],
+    # (2) advanced performance cold climate heat pump ["advperfhp"],
+    # (3) future performance heat pump ["futurehp"]
+    hp_model = "advperfhp"
+
+    # Parse user data
+    if bldg_class == "com":
+        temp_ref_it = temp_ref_com
+    else:
+        temp_ref_it = temp_ref_res
+    puma_slopes = pd.read_csv(
+        os.path.join(dir_path, "data", f"puma_slopes_{bldg_class}.csv")
+    )
+
+    main()
