@@ -78,15 +78,13 @@ def func_htg_cop_futurehp(temp_c):
 
 def main():
     # Loop through states to create profile outputs
-    for s in range(len(const.state_list)):
-        state_it = const.state_list[s]
-
+    for state in const.state_list:
         # Load and subset relevant data for the state
-        puma_data_it = const.puma_data[const.puma_data["state"] == state_it].reset_index()
-        puma_slopes_it = puma_slopes[puma_slopes["state"] == state_it].reset_index()
+        puma_data_it = const.puma_data[const.puma_data["state"] == state].reset_index()
+        puma_slopes_it = puma_slopes[puma_slopes["state"] == state].reset_index()
 
         temps_pumas_it = pd.read_csv(
-            f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state_it}_{yr_temps}.csv"
+            f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state}_{yr_temps}.csv"
         )
         temps_pumas_transpose_it = temps_pumas_it.T
 
@@ -127,7 +125,7 @@ def main():
         # Export profile file as CSV
         os.makedirs("Profiles", exist_ok=True)
         elec_htg_ff2hp_puma_mw_it.to_csv(
-            f"Profiles/elec_htg_ff2hp_{bldg_class}_{state_it}_{yr_temps}_{hp_model}_mw.csv",
+            f"Profiles/elec_htg_ff2hp_{bldg_class}_{state}_{yr_temps}_{hp_model}_mw.csv",
             index=False,
         )
 
