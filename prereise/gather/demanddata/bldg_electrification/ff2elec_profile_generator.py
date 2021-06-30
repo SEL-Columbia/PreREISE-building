@@ -3,68 +3,9 @@ import os
 import numpy as np
 import pandas as pd
 
-# This script creates time series for electricity loads from converting fossil fuel heating to electric heat pumps
+from prereise.gather.demanddata.bldg_electrification import const
 
-# Basic info and input files
-# Lists
-state_list = [
-    "AL",
-    "AZ",
-    "AR",
-    "CA",
-    "CO",
-    "CT",
-    "DE",
-    "DC",
-    "FL",
-    "GA",
-    "ID",
-    "IL",
-    "IN",
-    "IA",
-    "KS",
-    "KY",
-    "LA",
-    "ME",
-    "MD",
-    "MA",
-    "MI",
-    "MN",
-    "MS",
-    "MO",
-    "MT",
-    "NE",
-    "NV",
-    "NH",
-    "NJ",
-    "NM",
-    "NY",
-    "NC",
-    "ND",
-    "OH",
-    "OK",
-    "OR",
-    "PA",
-    "RI",
-    "SC",
-    "SD",
-    "TN",
-    "TX",
-    "UT",
-    "VT",
-    "VA",
-    "WA",
-    "WV",
-    "WI",
-    "WY",
-]
-# COP and capacity ratio models based on:
-# (a) 50th percentile NEEP CCHP database [midperfhp],
-# (b) 90th percentile NEEP CCHP database [advperfhp],
-# (c) future HP targets, average of residential and commercial targets [futurehp]
-dir_path = os.path.dirname(os.path.abspath(__file__))
-hp_param = pd.read_csv(os.path.join(dir_path, "data", "hp_parameters.csv"))
-puma_data = pd.read_csv(os.path.join(dir_path, "data", "puma_data.csv"))
+# This script creates time series for electricity loads from converting fossil fuel heating to electric heat pumps
 
 
 def calculate_cop(temp_c, model):
@@ -87,7 +28,7 @@ def _calculate_cop_base_cr_base(temp_c, model):
     cop_base = [0] * len(temp_c)
     cr_base = [0] * len(temp_c)
 
-    model_params = hp_param.set_index("model").loc[model]
+    model_params = const.hp_param.set_index("model").loc[model]
     T1_K = model_params.loc["T1_K"]  # noqa: N806
     COP1 = model_params.loc["COP1"]  # noqa: N806
     T2_K = model_params.loc["T2_K"]  # noqa: N806
@@ -135,18 +76,13 @@ def func_htg_cop_futurehp(temp_c):
     return cop_final
 
 
-# Reference temperatures for computations
-temp_ref_res = 18.3
-temp_ref_com = 16.7
-
-
 def main():
     # Loop through states to create profile outputs
-    for s in range(len(state_list)):
-        state_it = state_list[s]
+    for s in range(len(const.state_list)):
+        state_it = const.state_list[s]
 
         # Load and subset relevant data for the state
-        puma_data_it = puma_data[puma_data["state"] == state_it].reset_index()
+        puma_data_it = const.puma_data[const.puma_data["state"] == state_it].reset_index()
         puma_slopes_it = puma_slopes[puma_slopes["state"] == state_it].reset_index()
 
         temps_pumas_it = pd.read_csv(
@@ -211,10 +147,8 @@ if __name__ == "__main__":
     hp_model = "advperfhp"
 
     # Parse user data
-    if bldg_class == "com":
-        temp_ref_it = temp_ref_com
-    else:
-        temp_ref_it = temp_ref_res
+    temp_ref_it = const.temp_ref_com if bldg_class == "com" else const.temp_ref_res
+    dir_path = os.path.dirname(os.path.abspath(__file__))
     puma_slopes = pd.read_csv(
         os.path.join(dir_path, "data", f"puma_slopes_{bldg_class}.csv")
     )
