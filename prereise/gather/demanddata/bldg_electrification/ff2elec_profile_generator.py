@@ -125,7 +125,10 @@ def main():
         # Export profile file as CSV
         os.makedirs("Profiles", exist_ok=True)
         elec_htg_ff2hp_puma_mw_it.to_csv(
-            f"Profiles/elec_htg_ff2hp_{bldg_class}_{state}_{yr_temps}_{hp_model}_mw.csv",
+            os.path.join(
+                "Profiles",
+                "elec_htg_ff2hp_{bldg_class}_{state}_{yr_temps}_{hp_model}_mw.csv",
+            ),
             index=False,
         )
 
