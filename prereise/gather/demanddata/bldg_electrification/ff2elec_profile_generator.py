@@ -5,7 +5,8 @@ import pandas as pd
 
 from prereise.gather.demanddata.bldg_electrification import const
 
-# This script creates time series for electricity loads from converting fossil fuel heating to electric heat pumps
+# This script creates time series for electricity loads from converting fossil fuel
+# heating to electric heat pumps
 
 
 def calculate_cop(temp_c, model):
@@ -57,23 +58,15 @@ def _calculate_cop_base_cr_base(temp_c, model):
     return cop_base, cr_base
 
 
-# midperfhp
-def func_htg_cop_midperfhp(temp_c):
-    return calculate_cop(temp_c, "midperfhp")
+def htg_to_cop(temp_c, model):
+    if model == "futurehp":
+        cop_base, cr_base = _calculate_cop_base_cr_base(temp_c, model)
 
-
-# advperfhp
-def func_htg_cop_advperfhp(temp_c):
-    return calculate_cop(temp_c, "advperfhp")
-
-
-# futurehp
-def func_htg_cop_futurehp(temp_c):
-    cop_base, cr_base = _calculate_cop_base_cr_base(temp_c, "futurehp")
-
-    adv_cop = func_htg_cop_advperfhp(temp_c)
-    cop_final = [max(cop_base[i], adv_cop[i]) for i in range(len(cop_base))]
-    return cop_final
+        adv_cop = calculate_cop(temp_c, "advperfhp")
+        cop_final = [max(cop_base[i], adv_cop[i]) for i in range(len(cop_base))]
+        return cop_final
+    else:
+        return calculate_cop(temp_c, model)
 
 
 def main():
@@ -88,15 +81,12 @@ def main():
         )
         temps_pumas_transpose_it = temps_pumas_it.T
 
-        # Load HP function
-        func_htg_cop = globals()[f"func_htg_cop_{hp_model}"]
-
         # Compute electric HP loads from fossil fuel conversion
         elec_htg_ff2hp_puma_mw_it_ref_temp = temps_pumas_transpose_it.applymap(
             lambda x: temp_ref_it - x if temp_ref_it - x >= 0 else 0
         )
         elec_htg_ff2hp_puma_mw_it_func = temps_pumas_transpose_it.apply(
-            lambda x: np.reciprocal(func_htg_cop(x)), 1
+            lambda x: np.reciprocal(htg_to_cop(x, hp_model)), 1
         )
         elec_htg_ff2hp_puma_mw_it_func = pd.DataFrame(
             elec_htg_ff2hp_puma_mw_it_func.to_list()
@@ -127,7 +117,7 @@ def main():
         elec_htg_ff2hp_puma_mw_it.to_csv(
             os.path.join(
                 "Profiles",
-                "elec_htg_ff2hp_{bldg_class}_{state}_{yr_temps}_{hp_model}_mw.csv",
+                f"elec_htg_ff2hp_{bldg_class}_{state}_{yr_temps}_{hp_model}_mw.csv",
             ),
             index=False,
         )
@@ -138,7 +128,9 @@ if __name__ == "__main__":
     # Year for which temperatures are used to compute loads; options are 2008-2017
     yr_temps = 2016
 
-    # Building class for loads; options are (1) reidential ["res"] or (2) commercial ["com"]
+    # Building class for loads; options are
+    # (1) reidential ["res"]
+    # (2) commercial ["com"]
     bldg_class = "res"
 
     # Heat pump model to use. Options are:
