@@ -69,7 +69,46 @@ def htg_to_cop(temp_c, model):
         return calculate_cop(temp_c, model)
 
 
-def main():
+def generate_profiles(yr_temps=2016, bldg_class="res", hp_model="advperfhp"):
+    """Generate and write profiles on dist.
+
+    :param int yr_temps: year for temperature. Default is 2016.
+    :param str bldg_class: type of building. Default is residential.
+    :param str hp_model: type of heat pump. Default is advanced performance cold
+        climate heat pump.
+    :raises TypeError:
+        if ``yr_temps`` is not a float.
+        if ``bldg_class`` and ``hp_model`` are not str.
+    :raises ValueError:
+        if ``bldg_class`` is not 'res' or 'com'
+        if ``hp_model`` is not 'advperfhp', 'midperfhp' or 'futurehp'
+    """
+    if not isinstance(yr_temps, float):
+        raise TypeError("yr_temps must be a float")
+    if not isinstance(bldg_class, str):
+        raise TypeError("bldg_class must be a str")
+    if not isinstance(hp_model, str):
+        raise TypeError("hp_model must be a str")
+
+    if bldg_class not in ["res", "com"]:
+        raise ValueError(
+            "bldg_class must be one of: \n", "res: residential \n", "com: commercial"
+        )
+    if hp_model not in ["advperfhp", "midperfhp", "futurehp"]:
+        raise ValueError(
+            "hp_model must be one of: \n",
+            "midperfhp: mid-performance cold climate heat pump \n",
+            "advperfhp: advanced performance cold climate heat pump \n",
+            "futurehp: future performance heat pump",
+        )
+
+    # parse user data
+    temp_ref_it = const.temp_ref_com if bldg_class == "com" else const.temp_ref_res
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    puma_slopes = pd.read_csv(
+        os.path.join(dir_path, "data", f"puma_slopes_{bldg_class}.csv")
+    )
+
     # Loop through states to create profile outputs
     for state in const.state_list:
         # Load and subset relevant data for the state
@@ -121,29 +160,3 @@ def main():
             ),
             index=False,
         )
-
-
-if __name__ == "__main__":
-    # User inputs
-    # Year for which temperatures are used to compute loads; options are 2008-2017
-    yr_temps = 2016
-
-    # Building class for loads; options are
-    # (1) reidential ["res"]
-    # (2) commercial ["com"]
-    bldg_class = "res"
-
-    # Heat pump model to use. Options are:
-    # (1) mid-performance cold climate heat pump ["midperfhp"],
-    # (2) advanced performance cold climate heat pump ["advperfhp"],
-    # (3) future performance heat pump ["futurehp"]
-    hp_model = "advperfhp"
-
-    # Parse user data
-    temp_ref_it = const.temp_ref_com if bldg_class == "com" else const.temp_ref_res
-    dir_path = os.path.dirname(os.path.abspath(__file__))
-    puma_slopes = pd.read_csv(
-        os.path.join(dir_path, "data", f"puma_slopes_{bldg_class}.csv")
-    )
-
-    main()
