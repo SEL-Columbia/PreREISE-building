@@ -1,180 +1,162 @@
-# This script creates time series for electricity loads from converting fossil fuel heating to electric heat pumps
-
-### User inputs ###
-yr_temps = 2016 # Year for which temperatures are used to compute loads; options are 2008-2017
-bldg_class = "res" # Building class for loads; options are (1) reidential ["res"] or (2) commercial ["com"]
-hp_model = "advperfhp" # Heat pump model to use. Options are (1) mid-performance cold climate heat pump ["midperfhp"], (2) advanced performance cold climate heat pump ["advperfhp"],(3) future performance heat pump ["futurehp"]
-###################
-
-# Import libraries
-import pandas as pd
-import numpy as np
 import os
 
-# Basic info and input files
-## Lists
-state_list = ['AL','AZ','AR','CA','CO','CT','DE','DC','FL','GA','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
-# COP and capacity ratio models based on:
-## (a) 50th percentile NEEP CCHP database [midperfhp], (b) 90th percentile NEEP CCHP database [advperfhp], (c) future HP targets, average of residential and commercial targets [futurehp]
-hp_param = pd.read_csv("reference_files/hp_parameters.csv")
-puma_data = pd.read_csv("reference_files/puma_data.csv")
-puma_slopes = pd.read_csv("reference_files/puma_slopes_{}.csv".format(bldg_class))
+import numpy as np
+import pandas as pd
 
-### midperfhp
-def func_htg_cop_midperfhp(temp_c):
-    temp_k = [i + 273.15 for i in temp_c]
-    cop = [0] * len(temp_c)      
-    cop_base = [0] * len(temp_c)
-    cr_base = [0] * len(temp_c)     
-    eaux_base = [0] * len(temp_c)
+from prereise.gather.demanddata.bldg_electrification import const
 
-    pars = hp_param[hp_param["model"] == "midperfhp"].T 
-    T1_K = pars.iloc[3,0]
-    COP1 = pars.iloc[4,0]
-    T2_K = pars.iloc[8,0]
-    COP2 = pars.iloc[9,0]
-    T3_K = pars.iloc[13,0]
-    COP3 = pars.iloc[14,0]
-    CR3 = pars.iloc[15,0]
-    a = pars.iloc[16,0]
-    b = pars.iloc[17,0]
-    c = pars.iloc[18,0] 
-    
-    for i in range(len(temp_k)):
-        if temp_k[i]+b > 0:
-            cr_base[i] = a*np.log(temp_k[i])+c
-        if temp_k[i] > T2_K:
-            cop_base[i] = ((COP1-COP2)/(T1_K-T2_K))*temp_k[i] + (COP2*T1_K-COP1*T2_K)/(T1_K-T2_K)
-        if temp_k[i] > T3_K and temp_k[i] <= T2_K:
-            cop_base[i] = ((COP2-COP3)/(T2_K-T3_K))*temp_k[i] + (COP3*T2_K-COP2*T3_K)/(T2_K-T3_K)
-        if temp_k[i] <= T3_K:
-            cop_base[i] = (cr_base[i]/CR3)*COP3
-    
-    eaux = [0.75-i if 0.75-i >= 0 else 0 for i in cr_base]
-    
-    sumlist = [(cr_base[i]+eaux[i])/(cr_base[i]/cop_base[i]+eaux[i]) if cr_base[i]!=0 else 1 for i in range(len(cr_base))]
-    cop = [1 if cr_base[i]==0 else (1 if sumlist[i]<1 else sumlist[i]) for i in range(len(cr_base))]
+# This script creates time series for electricity loads from converting fossil fuel
+# heating to electric heat pumps
+
+
+def calculate_cop(temp_c, model):
+    cop_base, cr_base = _calculate_cop_base_cr_base(temp_c, model)
+
+    eaux = [max(0.75 - i, 0) for i in cr_base]
+
+    sumlist = [
+        (cr_base[i] + eaux[i]) / (cr_base[i] / cop_base[i] + eaux[i])
+        if cr_base[i] != 0
+        else 1
+        for i in range(len(cr_base))
+    ]
+    cop = [1 if cr_base[i] == 0 else max(sumlist[i], 1) for i in range(len(cr_base))]
     return cop
 
-### advperfhp
-def func_htg_cop_advperfhp(temp_c):
+
+def _calculate_cop_base_cr_base(temp_c, model):
     temp_k = [i + 273.15 for i in temp_c]
-    cop = [0] * len(temp_c)      
     cop_base = [0] * len(temp_c)
-    cr_base = [0] * len(temp_c)     
-    eaux_base = [0] * len(temp_c)
+    cr_base = [0] * len(temp_c)
 
-    pars = hp_param[hp_param["model"] == "advperfhp"].T 
-    T1_K = pars.iloc[3,0]
-    COP1 = pars.iloc[4,0]
-    T2_K = pars.iloc[8,0]
-    COP2 = pars.iloc[9,0]
-    T3_K = pars.iloc[13,0]
-    COP3 = pars.iloc[14,0]
-    CR3 = pars.iloc[15,0]
-    a = pars.iloc[16,0]
-    b = pars.iloc[17,0]
-    c = pars.iloc[18,0] 
-    
-    for i in range(len(temp_k)):
-        if temp_k[i]+b > 0:
-            cr_base[i] = a*np.log(temp_k[i])+c
-        
-        if temp_k[i] > T2_K:
-            cop_base[i] = ((COP1-COP2)/(T1_K-T2_K))*temp_k[i] + (COP2*T1_K-COP1*T2_K)/(T1_K-T2_K)
-        if temp_k[i] > T3_K and temp_k[i] <= T2_K:
-            cop_base[i] = ((COP2-COP3)/(T2_K-T3_K))*temp_k[i] + (COP3*T2_K-COP2*T3_K)/(T2_K-T3_K)
-        if temp_k[i] <= T3_K:
-            cop_base[i] = (cr_base[i]/CR3)*COP3
-            
-    eaux = [0.75-i if 0.75-i >= 0 else 0 for i in cr_base]
-    
-    sumlist = [(cr_base[i]+eaux[i])/(cr_base[i]/cop_base[i]+eaux[i]) if cr_base[i]!=0 else 1 for i in range(len(cr_base))]
-    cop = [1 if cr_base[i]==0 else (1 if sumlist[i]<1 else sumlist[i]) for i in range(len(cr_base))]
-    return cop
+    model_params = const.hp_param.set_index("model").loc[model]
+    T1_K = model_params.loc["T1_K"]  # noqa: N806
+    COP1 = model_params.loc["COP1"]  # noqa: N806
+    T2_K = model_params.loc["T2_K"]  # noqa: N806
+    COP2 = model_params.loc["COP2"]  # noqa: N806
+    T3_K = model_params.loc["T3_K"]  # noqa: N806
+    COP3 = model_params.loc["COP3"]  # noqa: N806
+    CR3 = model_params.loc["CR3"]  # noqa: N806
+    a = model_params.loc["a"]
+    b = model_params.loc["b"]
+    c = model_params.loc["c"]
 
-### futurehp
-def func_htg_cop_futurehp(temp_c):
-    temp_k = [i + 273.15 for i in temp_c]
-    cop = [0] * len(temp_c)      
-    cop_base = [0] * len(temp_c)
-    cr_base = [0] * len(temp_c)     
-    eaux_base = [0] * len(temp_c)
+    for i, temp in enumerate(temp_k):
+        if temp + b > 0:
+            cr_base[i] = a * np.log(temp) + c
+        if temp > T2_K:
+            cop_base[i] = ((COP1 - COP2) / (T1_K - T2_K)) * temp + (
+                COP2 * T1_K - COP1 * T2_K
+            ) / (T1_K - T2_K)
+        if T3_K < temp <= T2_K:
+            cop_base[i] = ((COP2 - COP3) / (T2_K - T3_K)) * temp + (
+                COP3 * T2_K - COP2 * T3_K
+            ) / (T2_K - T3_K)
+        if temp <= T3_K:
+            cop_base[i] = (cr_base[i] / CR3) * COP3
 
-    pars = hp_param[hp_param["model"] == "futurehp"].T 
-    T1_K = pars.iloc[3,0]
-    COP1 = pars.iloc[4,0]
-    T2_K = pars.iloc[8,0]
-    COP2 = pars.iloc[9,0]
-    T3_K = pars.iloc[13,0]
-    COP3 = pars.iloc[14,0]
-    CR3 = pars.iloc[15,0]
-    a = pars.iloc[16,0]
-    b = pars.iloc[17,0]
-    c = pars.iloc[18,0]
-    
-    for i in range(len(temp_k)):
-        if temp_k[i]+b > 0:
-            cr_base[i] = a*np.log(temp_k[i])+c
-        
-        if temp_k[i] > T2_K:
-            cop_base[i] = ((COP1-COP2)/(T1_K-T2_K))*temp_k[i] + (COP2*T1_K-COP1*T2_K)/(T1_K-T2_K)
-        if temp_k[i] > T3_K and temp_k[i] <= T2_K:
-            cop_base[i] = ((COP2-COP3)/(T2_K-T3_K))*temp_k[i] + (COP3*T2_K-COP2*T3_K)/(T2_K-T3_K)
-        if temp_k[i] <= T3_K:
-            cop_base[i] = (cr_base[i]/CR3)*COP3
-            
-    eaux = [0.75-i if 0.75-i >= 0 else 0 for i in cr_base]
-    
-    sumlist = [(cr_base[i]+eaux[i])/(cr_base[i]/cop_base[i]+eaux[i]) if cr_base[i]!=0 else 1 for i in range(len(cr_base))]
-    cop = [1 if cr_base[i]==0 else (1 if sumlist[i]<1 else sumlist[i]) for i in range(len(cr_base))]
-    
-    adv_cop = func_htg_cop_advperfhp(temp_c)
-    cop_final = [cop_base[i] if cop_base[i] >= adv_cop[i] else adv_cop[i] for i in range(len(cop_base))]
-    return cop_final
+    return cop_base, cr_base
 
-# Reference temperatures for computations
-temp_ref_res = 18.3
-temp_ref_com = 16.7
 
-if bldg_class == "com":
-    temp_ref_it = temp_ref_com
-else:
-    temp_ref_it = temp_ref_res
+def htg_to_cop(temp_c, model):
+    if model == "futurehp":
+        cop_base, cr_base = _calculate_cop_base_cr_base(temp_c, model)
 
-# Loop through states to create profile outputs
-for s in range(len(state_list)):
-    state_it = state_list[s]
-    
-    # Load and subset relevant data for the state
-    puma_data_it = puma_data[puma_data['state'] == state_it].reset_index()
-    puma_slopes_it = puma_slopes[puma_slopes['state'] == state_it].reset_index()
-    #temps_pumas_it = pd.read_csv("temps_pumas/temps_pumas_{}_{}.csv".format(state_it,yr_temps))
-    temps_pumas_it = pd.read_csv("https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{}_{}.csv".format(state_it,yr_temps))
-    temps_pumas_transpose_it = temps_pumas_it.T
-    
-    # Load HP function
-    func_htg_cop = globals()["func_htg_cop_{}".format(hp_model)]
-    
-    # Compute electric HP loads from fossil fuel conversion
-    elec_htg_ff2hp_puma_mw_it_ref_temp = temps_pumas_transpose_it.applymap(lambda x: temp_ref_it-x if temp_ref_it-x >= 0 else 0)
-    elec_htg_ff2hp_puma_mw_it_func = temps_pumas_transpose_it.apply(lambda x: np.reciprocal(func_htg_cop(x)),1)
-    elec_htg_ff2hp_puma_mw_it_func = pd.DataFrame(elec_htg_ff2hp_puma_mw_it_func.to_list())
-    elec_htg_ff2hp_puma_mw_it_func.index = list(elec_htg_ff2hp_puma_mw_it_ref_temp.index)
-    
-    elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it_ref_temp.multiply(elec_htg_ff2hp_puma_mw_it_func)        
-    
-    pumalist = [puma_slopes_it["htg_slope_{}_btu_m2_degC".format(bldg_class)][i]*puma_data_it["{}_area_2010_m2".format(bldg_class)][i]
-        *puma_data_it["frac_ff_sh_{}_2010".format(bldg_class)][i] * (293.0711/(10**6)/1000) for i in range(len(puma_data_it))]
-    
-    elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.mul(pumalist, axis=0)
-    elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.T
-    
-    elec_htg_ff2hp_puma_mw_it.columns = temps_pumas_it.columns
-    
-    # Export profile file as CSV
-    if os.path.exists("Profiles/"):
-        elec_htg_ff2hp_puma_mw_it.to_csv("Profiles/elec_htg_ff2hp_{}_{}_{}_{}_mw.csv".format(bldg_class,state_it,yr_temps,hp_model),index=False)
-    else: 
-        os.makedirs("Profiles/")
-        elec_htg_ff2hp_puma_mw_it.to_csv("Profiles/elec_htg_ff2hp_{}_{}_{}_{}_mw.csv".format(bldg_class,state_it,yr_temps,hp_model),index=False)
+        adv_cop = calculate_cop(temp_c, "advperfhp")
+        cop_final = [max(cop_base[i], adv_cop[i]) for i in range(len(cop_base))]
+        return cop_final
+    else:
+        return calculate_cop(temp_c, model)
+
+
+def generate_profiles(yr_temps=2016, bldg_class="res", hp_model="advperfhp"):
+    """Generate and write profiles on dist.
+
+    :param int yr_temps: year for temperature. Default is 2016.
+    :param str bldg_class: type of building. Default is residential.
+    :param str hp_model: type of heat pump. Default is advanced performance cold
+        climate heat pump.
+    :raises TypeError:
+        if ``yr_temps`` is not a float.
+        if ``bldg_class`` and ``hp_model`` are not str.
+    :raises ValueError:
+        if ``bldg_class`` is not 'res' or 'com'
+        if ``hp_model`` is not 'advperfhp', 'midperfhp' or 'futurehp'
+    """
+    if not isinstance(yr_temps, float):
+        raise TypeError("yr_temps must be a float")
+    if not isinstance(bldg_class, str):
+        raise TypeError("bldg_class must be a str")
+    if not isinstance(hp_model, str):
+        raise TypeError("hp_model must be a str")
+
+    if bldg_class not in ["res", "com"]:
+        raise ValueError(
+            "bldg_class must be one of: \n", "res: residential \n", "com: commercial"
+        )
+    if hp_model not in ["advperfhp", "midperfhp", "futurehp"]:
+        raise ValueError(
+            "hp_model must be one of: \n",
+            "midperfhp: mid-performance cold climate heat pump \n",
+            "advperfhp: advanced performance cold climate heat pump \n",
+            "futurehp: future performance heat pump",
+        )
+
+    # parse user data
+    temp_ref_it = const.temp_ref_com if bldg_class == "com" else const.temp_ref_res
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    puma_slopes = pd.read_csv(
+        os.path.join(dir_path, "data", f"puma_slopes_{bldg_class}.csv")
+    )
+
+    # Loop through states to create profile outputs
+    for state in const.state_list:
+        # Load and subset relevant data for the state
+        puma_data_it = const.puma_data[const.puma_data["state"] == state].reset_index()
+        puma_slopes_it = puma_slopes[puma_slopes["state"] == state].reset_index()
+
+        temps_pumas_it = pd.read_csv(
+            f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state}_{yr_temps}.csv"
+        )
+        temps_pumas_transpose_it = temps_pumas_it.T
+
+        # Compute electric HP loads from fossil fuel conversion
+        elec_htg_ff2hp_puma_mw_it_ref_temp = temps_pumas_transpose_it.applymap(
+            lambda x: temp_ref_it - x if temp_ref_it - x >= 0 else 0
+        )
+        elec_htg_ff2hp_puma_mw_it_func = temps_pumas_transpose_it.apply(
+            lambda x: np.reciprocal(htg_to_cop(x, hp_model)), 1
+        )
+        elec_htg_ff2hp_puma_mw_it_func = pd.DataFrame(
+            elec_htg_ff2hp_puma_mw_it_func.to_list()
+        )
+        elec_htg_ff2hp_puma_mw_it_func.index = list(
+            elec_htg_ff2hp_puma_mw_it_ref_temp.index
+        )
+
+        elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it_ref_temp.multiply(
+            elec_htg_ff2hp_puma_mw_it_func
+        )
+
+        pumalist = [
+            puma_slopes_it[f"htg_slope_{bldg_class}_btu_m2_degC"][i]
+            * puma_data_it[f"{bldg_class}_area_2010_m2"][i]
+            * puma_data_it[f"frac_ff_sh_{bldg_class}_2010"][i]
+            * (293.0711 / (10 ** 6) / 1000)
+            for i in range(len(puma_data_it))
+        ]
+
+        elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.mul(pumalist, axis=0)
+        elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.T
+
+        elec_htg_ff2hp_puma_mw_it.columns = temps_pumas_it.columns
+
+        # Export profile file as CSV
+        os.makedirs("Profiles", exist_ok=True)
+        elec_htg_ff2hp_puma_mw_it.to_csv(
+            os.path.join(
+                "Profiles",
+                f"elec_htg_ff2hp_{bldg_class}_{state}_{yr_temps}_{hp_model}_mw.csv",
+            ),
+            index=False,
+        )
