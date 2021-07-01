@@ -60,10 +60,10 @@ def _calculate_cop_base_cr_base(temp_c, model):
 
 def htg_to_cop(temp_c, model):
     if model == "futurehp":
-        cop_base, cr_base = _calculate_cop_base_cr_base(temp_c, model)
+        cop = calculate_cop(temp_c, model)
 
         adv_cop = calculate_cop(temp_c, "advperfhp")
-        cop_final = [max(cop_base[i], adv_cop[i]) for i in range(len(cop_base))]
+        cop_final = [max(cop[i], adv_cop[i]) for i in range(len(cop))]
         return cop_final
     else:
         return calculate_cop(temp_c, model)
