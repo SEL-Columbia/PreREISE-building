@@ -142,7 +142,7 @@ def generate_profiles(yr_temps=2016, bldg_class="res", hp_model="advperfhp"):
             puma_slopes_it[f"htg_slope_{bldg_class}_btu_m2_degC"][i]
             * puma_data_it[f"{bldg_class}_area_2010_m2"][i]
             * puma_data_it[f"frac_ff_sh_{bldg_class}_2010"][i]
-            * (293.0711 / (10 ** 6) / 1000)
+            * (const.conv_mmbtu_to_kwh / (10 ** 6) / 1000)
             for i in range(len(puma_data_it))
         ]
 

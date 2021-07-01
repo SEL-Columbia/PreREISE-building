@@ -65,3 +65,6 @@ puma_data = pd.read_csv(os.path.join(dir_path, "data", "puma_data.csv"))
 # Reference temperatures for computations
 temp_ref_res = 18.3
 temp_ref_com = 16.7
+
+# Unit conversions
+conv_mmbtu_to_kwh = 293.0711
