@@ -120,24 +120,16 @@ def generate_profiles(yr_temps, bldg_class, hp_model, output_folder="Profiles"):
         # Load and subset relevant data for the state
         puma_data_it = const.puma_data.query("state == @state")
         puma_slopes_it = puma_slopes.query("state == @state")
-
         temps_pumas_it = pd.read_csv(
             f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state}_{yr_temps}.csv"
         )
-        temps_pumas_transpose_it = temps_pumas_it.T
 
         # Compute electric HP loads from fossil fuel conversion
-        elec_htg_ff2hp_puma_mw_it_ref_temp = temps_pumas_transpose_it.applymap(
+        elec_htg_ff2hp_puma_mw_it_ref_temp = temps_pumas_it.applymap(
             lambda x: max(temp_ref_it - x, 0)
         )
-        elec_htg_ff2hp_puma_mw_it_func = temps_pumas_transpose_it.apply(
-            lambda x: np.reciprocal(htg_to_cop(x, hp_model)), 1
-        )
-        elec_htg_ff2hp_puma_mw_it_func = pd.DataFrame(
-            elec_htg_ff2hp_puma_mw_it_func.to_list()
-        )
-        elec_htg_ff2hp_puma_mw_it_func.index = list(
-            elec_htg_ff2hp_puma_mw_it_ref_temp.index
+        elec_htg_ff2hp_puma_mw_it_func = temps_pumas_it.apply(
+            lambda x: np.reciprocal(htg_to_cop(x, hp_model))
         )
 
         elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it_ref_temp.multiply(
@@ -151,10 +143,7 @@ def generate_profiles(yr_temps, bldg_class, hp_model, output_folder="Profiles"):
             * (const.conv_mmbtu_to_kwh * const.conv_kw_to_mw)
         )
 
-        elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.mul(pumalist, axis=0)
-        elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.T
-
-        elec_htg_ff2hp_puma_mw_it.columns = temps_pumas_it.columns
+        elec_htg_ff2hp_puma_mw_it *= pumalist
 
         # Export profile file as CSV
         elec_htg_ff2hp_puma_mw_it.to_csv(
