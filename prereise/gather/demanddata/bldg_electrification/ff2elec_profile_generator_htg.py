@@ -109,14 +109,15 @@ def generate_profiles(yr_temps, bldg_class, hp_model):
     temp_ref_it = const.temp_ref_com if bldg_class == "com" else const.temp_ref_res
     dir_path = os.path.dirname(os.path.abspath(__file__))
     puma_slopes = pd.read_csv(
-        os.path.join(dir_path, "data", f"puma_slopes_ff_{bldg_class}.csv")
+        os.path.join(dir_path, "data", f"puma_slopes_ff_{bldg_class}.csv"),
+        index_col="puma",
     )
 
     # Loop through states to create profile outputs
     for state in const.state_list:
         # Load and subset relevant data for the state
         puma_data_it = const.puma_data[const.puma_data["state"] == state].reset_index()
-        puma_slopes_it = puma_slopes[puma_slopes["state"] == state].reset_index()
+        puma_slopes_it = puma_slopes.query("state == @state")
 
         temps_pumas_it = pd.read_csv(
             f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state}_{yr_temps}.csv"
