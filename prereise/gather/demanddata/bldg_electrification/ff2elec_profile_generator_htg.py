@@ -128,7 +128,7 @@ def generate_profiles(yr_temps, bldg_class, hp_model, output_folder="Profiles"):
 
         # Compute electric HP loads from fossil fuel conversion
         elec_htg_ff2hp_puma_mw_it_ref_temp = temps_pumas_transpose_it.applymap(
-            lambda x: temp_ref_it - x if temp_ref_it - x >= 0 else 0
+            lambda x: max(temp_ref_it - x, 0)
         )
         elec_htg_ff2hp_puma_mw_it_func = temps_pumas_transpose_it.apply(
             lambda x: np.reciprocal(htg_to_cop(x, hp_model)), 1
