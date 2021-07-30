@@ -9,10 +9,7 @@ setup(
     author_email="kaspar@breakthroughenergy.org",
     packages=find_packages(),
     package_data={
-        "prereise": [
-            "gather/*/data/*",
-            "gather/data/*",
-        ]
+        "prereise": ["gather/*/data/*", "gather/data/*", "gather/*/*/data/*"]
     },
     zip_safe=False,
 )
