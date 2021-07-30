@@ -116,7 +116,7 @@ def generate_profiles(yr_temps, bldg_class, hp_model):
     # Loop through states to create profile outputs
     for state in const.state_list:
         # Load and subset relevant data for the state
-        puma_data_it = const.puma_data[const.puma_data["state"] == state].reset_index()
+        puma_data_it = const.puma_data.query("state == @state")
         puma_slopes_it = puma_slopes.query("state == @state")
 
         temps_pumas_it = pd.read_csv(
