@@ -66,7 +66,7 @@ def htg_to_cop(temp_c, model):
         return calculate_cop(temp_c, model)
 
 
-def generate_profiles(yr_temps, bldg_class, hp_model):
+def generate_profiles(yr_temps, bldg_class, hp_model, output_folder="Profiles"):
     """Generate and write profiles on dist.
     Create time series for electricity loads from converting
     fossil fuel heating to electric heat pumps.
@@ -74,6 +74,7 @@ def generate_profiles(yr_temps, bldg_class, hp_model):
     :param int yr_temps: year for temperature.
     :param str bldg_class: type of building.
     :param str hp_model: type of heat pump.
+    :param str output_folder: location to store profiles (will be created if necessary).
     :raises TypeError:
         if ``yr_temps`` is not an int.
         if ``bldg_class`` and ``hp_model`` are not str.
@@ -104,6 +105,7 @@ def generate_profiles(yr_temps, bldg_class, hp_model):
             "advperfhp: advanced performance cold climate heat pump \n",
             "futurehp: future performance heat pump",
         )
+    os.makedirs(output_folder, exist_ok=True)
 
     # parse user data
     temp_ref_it = const.temp_ref_com if bldg_class == "com" else const.temp_ref_res
@@ -155,7 +157,6 @@ def generate_profiles(yr_temps, bldg_class, hp_model):
         elec_htg_ff2hp_puma_mw_it.columns = temps_pumas_it.columns
 
         # Export profile file as CSV
-        os.makedirs("Profiles", exist_ok=True)
         elec_htg_ff2hp_puma_mw_it.to_csv(
             os.path.join(
                 "Profiles",
