@@ -141,12 +141,12 @@ def generate_profiles(yr_temps, bldg_class, hp_model):
             elec_htg_ff2hp_puma_mw_it_func
         )
 
-        pumalist = [
+        pumalist = (
             puma_slopes_it[f"htg_slope_{bldg_class}_mmbtu_m2_degC"]
             * puma_data_it[f"{bldg_class}_area_2010_m2"]
             * puma_data_it[f"frac_ff_sh_{bldg_class}_2010"]
             * (const.conv_mmbtu_to_kwh * const.conv_kw_to_mw)
-        ]
+        )
 
         elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.mul(pumalist, axis=0)
         elec_htg_ff2hp_puma_mw_it = elec_htg_ff2hp_puma_mw_it.T
