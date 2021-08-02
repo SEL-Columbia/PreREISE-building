@@ -55,7 +55,7 @@ state_list = [
     "WY",
 ]
 
-classes = ["res","com"]
+classes = ["res", "com"]
 
 # Years with temperature data
 yr_temps_all = list(range(2008, 2018))
