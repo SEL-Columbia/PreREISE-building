@@ -81,10 +81,10 @@ for state in const.state_list:
             frac_ff_other = puma_data_it["frac_ff_sh_com_2010"]
 
         # puma area * percentage
-        areas_ff_sh_it = puma_data_it[f"{clas}_area_2010_m2"] * frac_ff_sh
-        areas_ff_dhw_it = puma_data_it[f"{clas}_area_2010_m2"] * frac_ff_dhw
-        areas_ff_other_it = puma_data_it[f"{clas}_area_2010_m2"] * frac_ff_other
-        areas_ff_cook_it = puma_data_it[f"{clas}_area_2010_m2"] * frac_ff_cook
+        areas_ff_sh_it = (puma_data_it[f"{clas}_area_2010_m2"] * frac_ff_sh)
+        areas_ff_dhw_it = (puma_data_it[f"{clas}_area_2010_m2"] * frac_ff_dhw)
+        areas_ff_other_it = (puma_data_it[f"{clas}_area_2010_m2"] * frac_ff_other)
+        areas_ff_cook_it = (puma_data_it[f"{clas}_area_2010_m2"] * frac_ff_cook)
 
         # sum of previous areas to be used in fitting
         sum_areaff_sh = sum(areas_ff_sh_it)
@@ -306,10 +306,10 @@ for state in const.state_list:
 
 # Export heating/hot water/cooking coefficients for each state
 state_slopes_res.to_csv(
-    os.path.join(dir_path, "data", "0state_slopes_ff_res.csv"), index=False
+    os.path.join(dir_path, "data", "state_slopes_ff_res.csv"), index=False
 )
 state_slopes_com.to_csv(
-    os.path.join(dir_path, "data", "0state_slopes_ff_com.csv"), index=False
+    os.path.join(dir_path, "data", "state_slopes_ff_com.csv"), index=False
 )
 
 ##############################################
@@ -484,7 +484,7 @@ for com_state_group in com_state_groups:
                 )
             )
         )
-    )  # check sumproduct denom
+    )  
 
 area_scale_com["hdd_normals_2010_popwtd"] = hdd65listcom
 area_scale_com["htg_slope_com_mmbtu_m2_degC_pophddwtd"] = htgslppoplistcom
@@ -648,8 +648,8 @@ for state in const.state_list:
 
 # Export climate adjusted space heating slopes of each puma
 adj_slopes_res.to_csv(
-    os.path.join(dir_path, "data", "0puma_slopes_ff_res.csv"), index=False
+    os.path.join(dir_path, "data", "puma_slopes_ff_res.csv"), index=False
 )
 adj_slopes_com.to_csv(
-    os.path.join(dir_path, "data", "0puma_slopes_ff_com.csv"), index=False
+    os.path.join(dir_path, "data", "puma_slopes_ff_com.csv"), index=False
 )
