@@ -298,6 +298,7 @@ if __name__ == "__main__":
         os.path.join(data_dir, "area_scale_com.csv"), index_col=False
     )
 
+    # Use .query lookup
     # Extract res state groups from area_scale_res
     res_state_groups = []
     for i in area_scale_res.T.columns:
