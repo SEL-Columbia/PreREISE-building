@@ -215,6 +215,8 @@ def calculate_state_slopes(puma_data, year):
     return state_slopes_res, state_slopes_com
 
 
+dir_path = os.path.dirname(os.path.abspath(__file__))
+
 if __name__ == "__main__":
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
@@ -237,30 +239,25 @@ if __name__ == "__main__":
 
     # Create data frames for space heating fossil fuel usage slopes at each PUMA
     puma_slopes_res = pd.DataFrame(
-        columns=(["state", "puma", "htg_slope_res_mmbtu_m2_degC"])
+        {"state": puma_data["state"], "puma": puma_data["puma"]}
     )
+
     puma_slopes_com = pd.DataFrame(
-        columns=(["state", "puma", "htg_slope_com_mmbtu_m2_degC"])
+        {"state": puma_data["state"], "puma": puma_data["puma"]}
     )
 
-    # Fill above dataframes with each puma and their corresponding un-adjusted statewide
-    # heating slope
-    for i in range(len(puma_data)):
-        state_it = puma_data["state"][i]
+    res_state_htg_slope = []
+    com_state_htg_slope = []
+    for state in puma_data["state"]:
+        res_state_htg_slope.append(
+            list(state_slopes_res.query("state == @state")["sh_slope"])[0]
+        )
+        com_state_htg_slope.append(
+            list(state_slopes_com.query("state == @state")["sh_slope"])[0]
+        )
 
-        df_index_res = len(puma_slopes_res)
-        puma_slopes_res.loc[df_index_res] = [
-            state_it,
-            puma_data["puma"][i],
-            state_slopes_res.loc[state_it, "sh_slope"],
-        ]
-
-        df_index_com = len(puma_slopes_com)
-        puma_slopes_com.loc[df_index_com] = [
-            state_it,
-            puma_data["puma"][i],
-            state_slopes_com.loc[state_it, "sh_slope"],
-        ]
+    puma_slopes_res["htg_slope_res_mmbtu_m2_degC"] = res_state_htg_slope
+    puma_slopes_com["htg_slope_com_mmbtu_m2_degC"] = com_state_htg_slope
 
     puma_data["hd_183C_2010"] = ""
     puma_data["hd_167C_2010"] = ""
@@ -268,6 +265,7 @@ if __name__ == "__main__":
     for state in const.state_list:
 
         # Load puma temperatures
+        yr_temps = 2010
         temps_pumas = pd.read_csv(
             f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state}_{year}.csv"
         )
@@ -282,7 +280,7 @@ if __name__ == "__main__":
         ).T
 
         # Annual heating degrees for each puma
-        for i in list(puma_data[puma_data["state"] == state]["puma"]):
+        for i in list(puma_data.query("state == @state")["puma"]):
             puma_data.at[
                 puma_data.loc[puma_data["puma"] == i].index[0], "hd_183C_2010"
             ] = sum(list(temp_diff_res[i]))
@@ -298,24 +296,25 @@ if __name__ == "__main__":
         os.path.join(data_dir, "area_scale_com.csv"), index_col=False
     )
 
-    # Use .query lookup
     # Extract res state groups from area_scale_res
+    res_state_rows = area_scale_res.values.tolist()
     res_state_groups = []
-    for i in area_scale_res.T.columns:
-        stategrp = []
-        for j in range(5):
-            if len(str(area_scale_res.T[i][j])) == 2:
-                stategrp.append(area_scale_res.T[i][j])
-        res_state_groups.append(stategrp)
+    for row in res_state_rows:
+        state_row = []
+        for element in row:
+            if type(element) == str:
+                state_row.append(element)
+        res_state_groups.append(state_row)
 
     # Extract com state groups from area_scale_com
+    com_state_rows = area_scale_com.values.tolist()
     com_state_groups = []
-    for i in area_scale_com.T.columns:
-        stategrp = []
-        for j in range(9):
-            if len(str(area_scale_com.T[i][j])) == 2:
-                stategrp.append(area_scale_com.T[i][j])
-        com_state_groups.append(stategrp)
+    for row in com_state_rows:
+        state_row = []
+        for element in row:
+            if type(element) == str:
+                state_row.append(element)
+        com_state_groups.append(state_row)
 
     hdd65listres = []
     htgslppoplistres = []
@@ -493,15 +492,16 @@ if __name__ == "__main__":
             / (x / 1000)
         ) * 10 ** (-6)
 
-    puma_data["htg_slope_res_mmbtu_m2_degC"] = ""
-    puma_data["htg_slope_com_mmbtu_m2_degC"] = ""
-
     adj_slopes_res = pd.DataFrame(
-        columns=(["state", "puma", "htg_slope_res_mmbtu_m2_degC"])
+        {"state": puma_data["state"], "puma": puma_data["puma"]}
     )
+
     adj_slopes_com = pd.DataFrame(
-        columns=(["state", "puma", "htg_slope_com_mmbtu_m2_degC"])
+        {"state": puma_data["state"], "puma": puma_data["puma"]}
     )
+
+    adj_slopes_res["htg_slope_res_mmbtu_m2_degC"] = ""
+    adj_slopes_com["htg_slope_com_mmbtu_m2_degC"] = ""
 
     for state in const.state_list:
 
@@ -531,13 +531,10 @@ if __name__ == "__main__":
             slope_scalar_res_it
             * puma_data_it["hdd65_normals_2010"].map(func_slope_res_exp)
         )
-        for i in range(len(puma_data_it)):
-            index_r = len(adj_slopes_res)
-            adj_slopes_res.loc[index_r] = [
-                state,
-                puma_data_it["puma"][i],
-                adj_slope_res_list[i],
-            ]
+
+        adj_slopes_res.loc[
+            adj_slopes_res.state == state, "htg_slope_res_mmbtu_m2_degC"
+        ] = adj_slope_res_list
 
         # Commercial Adjustments
         htg_slope_com_mmbtu_m2_degC_basis = list(  # noqa: N816
@@ -560,13 +557,10 @@ if __name__ == "__main__":
             slope_scalar_com_it
             * puma_data_it["hdd65_normals_2010"].map(func_slope_com_exp)
         )
-        for i in range(len(puma_data_it)):
-            index_c = len(adj_slopes_com)
-            adj_slopes_com.loc[index_c] = [
-                state,
-                puma_data_it["puma"][i],
-                adj_slope_com_list[i],
-            ]
+
+        adj_slopes_com.loc[
+            adj_slopes_com.state == state, "htg_slope_com_mmbtu_m2_degC"
+        ] = adj_slope_com_list
 
     # Export climate adjusted space heating slopes of each puma
     adj_slopes_res.to_csv(os.path.join(data_dir, "puma_slopes_ff_res.csv"), index=False)
