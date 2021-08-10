@@ -8,11 +8,10 @@ from scipy.optimize import least_squares
 from prereise.gather.demanddata.bldg_electrification import const
 
 
-def calculate_state_slopes(puma_data):
+def calculate_state_slopes(puma_data, year):
     # 2010 ff data used for fitting
-    start_date = "2010-01-01"
-    end_date = "2011-01-01"
-    yr_temps = 2010
+    start_date = f"{year}-01-01"
+    end_date = f"{year+1}-01-01"
 
     # Computing number of hours each month for normalization in the fitting code below
     dt = pd.date_range(start=start_date, end=end_date, freq="H").to_pydatetime().tolist()
@@ -61,7 +60,7 @@ def calculate_state_slopes(puma_data):
 
         # Load puma temperatures
         temps_pumas = temps_pumas = pd.read_csv(
-            f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state}_{yr_temps}.csv"
+            f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state}_{year}.csv"
         )
         temps_pumas_transpose = temps_pumas.T
 
@@ -356,7 +355,7 @@ if __name__ == "__main__":
 
         # Load puma temperatures
         temps_pumas = pd.read_csv(
-            f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state}_{yr_temps}.csv"
+            f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state}_{year}.csv"
         )
         temps_pumas_transpose = temps_pumas.T
 
