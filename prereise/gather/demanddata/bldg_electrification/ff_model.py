@@ -219,11 +219,7 @@ def calculate_state_slopes(puma_data, year):
 
 
 if __name__ == "__main__":
-    puma_data = pd.read_csv(
-        os.path.join(dir_path, "data", "puma_data.csv"), index_col=False
-    )
-    
-    state_slopes_res, state_slopes_com = calculate_state_slopes(puma_data)
+    state_slopes_res, state_slopes_com = calculate_state_slopes(const.puma_data)
     state_slopes_res.to_csv(
         os.path.join(dir_path, "data", "state_slopes_ff_res.csv"), index=False
     )
@@ -234,6 +230,10 @@ if __name__ == "__main__":
     ##############################################
     # Space heating slope adjustment for climate #
     ##############################################
+
+    puma_data = pd.read_csv(
+        os.path.join(dir_path, "data", "puma_data.csv"), index_col=False
+    )
 
     # Create data frames for space heating fossil fuel usage slopes at each PUMA
     puma_slopes_res = pd.DataFrame(
