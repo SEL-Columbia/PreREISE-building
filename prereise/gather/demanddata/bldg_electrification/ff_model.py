@@ -98,9 +98,7 @@ def calculate_state_slopes(puma_data, year):
                 # Hourly heating degrees for all pumas in a given state, multiplied by their corresponding area and percent fossil fuel, summed up to one hourly list
                 hd_hourly_it_sh = (
                     temps_pumas_transpose.applymap(
-                        lambda x: const.temp_ref[clas] - x
-                        if const.temp_ref[clas] - x >= 0
-                        else 0
+                        lambda x: max(const.temp_ref[clas] - x, 0)
                     )
                     .mul(areas_ff_sh_it, axis=0)
                     .sum(axis=0)
@@ -189,18 +187,14 @@ def calculate_state_slopes(puma_data, year):
                 # Hourly heating degrees for all pumas in a given state, multiplied by their corresponding area and percent fossil fuel, summed up to one hourly list
                 hd_hourly_it_sh = (
                     temps_pumas_transpose.applymap(
-                        lambda x: const.temp_ref[clas] - x
-                        if const.temp_ref[clas] - x >= 0
-                        else 0
+                        lambda x: max(const.temp_ref[clas] - x, 0)
                     )
                     .mul(areas_ff_sh_it, axis=0)
                     .sum(axis=0)
                 )
                 hd_hourly_it_other = (
                     temps_pumas_transpose.applymap(
-                        lambda x: x - const.temp_ref[clas]
-                        if x - const.temp_ref[clas] >= 0
-                        else 0
+                        lambda x: max(x - const.temp_ref[clas], 0)
                     )
                     .mul(areas_ff_other_it, axis=0)
                     .sum(axis=0)
