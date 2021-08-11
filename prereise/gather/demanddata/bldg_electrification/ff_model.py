@@ -12,18 +12,18 @@ def calculate_state_slopes(puma_data, year):
     dti = pd.date_range(start=f"{year}-01-01", end=f"{year}-12-31 23:00:00", freq="H")
 
     # Load in historical 2010 fossil fuel usage data
-    dir_path = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
     ng_usage_data_res = pd.read_csv(
-        os.path.join(dir_path, "data", "ng_monthly_mmbtu_2010_res.csv")
+        os.path.join(data_dir, "ng_monthly_mmbtu_2010_res.csv")
     )
     ng_usage_data_com = pd.read_csv(
-        os.path.join(dir_path, "data", "ng_monthly_mmbtu_2010_com.csv")
+        os.path.join(data_dir, "ng_monthly_mmbtu_2010_com.csv")
     )
     fok_usage_data = pd.read_csv(
-        os.path.join(dir_path, "data", "fok_data_bystate_2010.csv")
+        os.path.join(data_dir, "fok_data_bystate_2010.csv"), index_col="state"
     )
     othergas_usage_data = pd.read_csv(
-        os.path.join(dir_path, "data", "propane_data_bystate_2010.csv")
+        os.path.join(data_dir, "propane_data_bystate_2010.csv"), index_col="state"
     )
 
     # Initialize dataframes to store state heating slopes
@@ -95,14 +95,8 @@ def calculate_state_slopes(puma_data, year):
             )
             sum_natgas = sum(natgas)
             # Load annual fuel oil/kerosene and other gas/propane usage for the state
-            fok = list(
-                fok_usage_data[fok_usage_data["state"] == state][f"fok.{clas}.mmbtu"]
-            )[0]
-            other = list(
-                othergas_usage_data[othergas_usage_data["state"] == state][
-                    f"propane.{clas}.mmbtu"
-                ]
-            )[0]
+            fok = fok_usage_data.loc[state, f"fok.{clas}.mmbtu"]
+            other = othergas_usage_data.loc[state, f"propane.{clas}.mmbtu"]
             totfuel = fok + sum_natgas + other
             # Scale total fossil fuel usage by monthly natural gas
             ff_usage_data_it = [
