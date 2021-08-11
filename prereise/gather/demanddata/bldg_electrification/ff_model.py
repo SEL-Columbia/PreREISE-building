@@ -9,16 +9,7 @@ from prereise.gather.demanddata.bldg_electrification import const
 
 
 def calculate_state_slopes(puma_data, year):
-    # 2010 ff data used for fitting
-    start_date = f"{year}-01-01"
-    end_date = f"{year+1}-01-01"
-
-    # Computing number of hours each month for normalization in the fitting code below
-    dt = pd.date_range(start=start_date, end=end_date, freq="H").to_pydatetime().tolist()
-    datetimes = pd.DataFrame(
-        {"date_time": [dt[i].strftime("%Y-%m-%d %H:%M:%S") for i in range(len(dt) - 1)]}
-    )
-    month_hrly = [int(dt[i].strftime("%m")) for i in range(len(dt) - 1)]
+    dti = pd.date_range(start=f"{year}-01-01", end=f"{year}-12-31 23:00:00", freq="H")
 
     # Load in historical 2010 fossil fuel usage data
     dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -133,7 +124,7 @@ def calculate_state_slopes(puma_data, year):
                 # Average hd per month
                 df_hourly_it = pd.DataFrame(
                     {
-                        "month": month_hrly,
+                        "month": dti.month,
                         "hd_hourly_it_sh": hd_hourly_it_sh,
                         "hd_hourly_it_dhw": hd_hourly_it_dhw,
                     }
@@ -228,7 +219,7 @@ def calculate_state_slopes(puma_data, year):
                 # Average hd per month
                 df_hourly_it = pd.DataFrame(
                     {
-                        "month": month_hrly,
+                        "month": dti.month,
                         "hd_hourly_it_sh": hd_hourly_it_sh,
                         "hd_hourly_it_other": hd_hourly_it_other,
                     }
