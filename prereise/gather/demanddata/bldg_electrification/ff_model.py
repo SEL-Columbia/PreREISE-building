@@ -46,7 +46,7 @@ def calculate_state_slopes(puma_data, year):
 
     for state in const.state_list:
         # Load puma data
-        puma_data_it = puma_data[puma_data["state"] == state].reset_index()
+        puma_data_it = const.puma_data.query("state == @state")
         n_tracts = len(puma_data_it)
 
         # Load puma temperatures
@@ -59,20 +59,29 @@ def calculate_state_slopes(puma_data, year):
 
             temp_ref_it = const.temp_ref_res if clas == "res" else const.temp_ref_com
 
-            # percentage of puma area that uses fossil fuel
-            frac_ff_sh = puma_data_it[f"frac_ff_sh_{clas}_2010"]
-            frac_ff_dhw = puma_data_it[f"frac_ff_dhw_{clas}_2010"]
-            frac_ff_cook = puma_data_it["frac_ff_cook_com_2010"]
+            # puma area * percentage of puma area that uses fossil fuel
+            areas_ff_sh_it = (
+                puma_data_it[f"{clas}_area_2010_m2"]
+                * puma_data_it[f"frac_ff_sh_{clas}_2010"]
+            )
+            areas_ff_dhw_it = (
+                puma_data_it[f"{clas}_area_2010_m2"]
+                * puma_data_it[f"frac_ff_dhw_{clas}_2010"]
+            )
+            areas_ff_cook_it = (
+                puma_data_it[f"{clas}_area_2010_m2"]
+                * puma_data_it["frac_ff_cook_com_2010"]
+            )
             if clas == "res":
-                frac_ff_other = puma_data_it["frac_ff_other_res_2010"]
+                areas_ff_other_it = (
+                    puma_data_it[f"{clas}_area_2010_m2"]
+                    * puma_data_it["frac_ff_other_res_2010"]
+                )
             else:
-                frac_ff_other = puma_data_it["frac_ff_sh_com_2010"]
-
-            # puma area * percentage
-            areas_ff_sh_it = [puma_data_it[f'{clas}_area_2010_m2'][i] * frac_ff_sh[i] for i in range(len(puma_data_it))]
-            areas_ff_dhw_it = [puma_data_it[f'{clas}_area_2010_m2'][i] * frac_ff_dhw[i] for i in range(len(puma_data_it))]
-            areas_ff_other_it = [puma_data_it[f'{clas}_area_2010_m2'][i] * frac_ff_other[i] for i in range(len(puma_data_it))]
-            areas_ff_cook_it = [puma_data_it[f'{clas}_area_2010_m2'][i] * frac_ff_cook[i] for i in range(len(puma_data_it))]
+                areas_ff_other_it = (
+                    puma_data_it[f"{clas}_area_2010_m2"]
+                    * puma_data_it["frac_ff_sh_com_2010"]
+                )
 
             # sum of previous areas to be used in fitting
             sum_areaff_sh = sum(areas_ff_sh_it)
