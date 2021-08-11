@@ -13,12 +13,10 @@ def calculate_state_slopes(puma_data, year):
 
     # Load in historical 2010 fossil fuel usage data
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-    ng_usage_data_res = pd.read_csv(
-        os.path.join(data_dir, "ng_monthly_mmbtu_2010_res.csv")
-    )
-    ng_usage_data_com = pd.read_csv(
-        os.path.join(data_dir, "ng_monthly_mmbtu_2010_com.csv")
-    )
+    ng_usage_data = {
+        "res": pd.read_csv(os.path.join(data_dir, "ng_monthly_mmbtu_2010_res.csv"),
+        "com": pd.read_csv(os.path.join(data_dir, "ng_monthly_mmbtu_2010_com.csv"),
+    }
     fok_usage_data = pd.read_csv(
         os.path.join(data_dir, "fok_data_bystate_2010.csv"), index_col="state"
     )
@@ -90,18 +88,13 @@ def calculate_state_slopes(puma_data, year):
             sum_areaff_cook = sum(areas_ff_cook_it)
 
             # Load monthly natural gas usage for the state
-            natgas = list(
-                ng_usage_data_res[state] if clas == "res" else ng_usage_data_com[state]
-            )
-            sum_natgas = sum(natgas)
+            natgas = ng_usage_data[clas][state]
             # Load annual fuel oil/kerosene and other gas/propane usage for the state
             fok = fok_usage_data.loc[state, f"fok.{clas}.mmbtu"]
             other = othergas_usage_data.loc[state, f"propane.{clas}.mmbtu"]
-            totfuel = fok + sum_natgas + other
+            totfuel = fok + other + natgas.sum()
             # Scale total fossil fuel usage by monthly natural gas
-            ff_usage_data_it = [
-                natgas[i] / sum_natgas * (totfuel) for i in range(len(natgas))
-            ]
+            ff_usage_data_it = totfuel * natgas / natgas.sum()
 
             temp_ref_lin_dec_it = temp_ref_it
             temp_ref_lin_inc_it = temp_ref_it
