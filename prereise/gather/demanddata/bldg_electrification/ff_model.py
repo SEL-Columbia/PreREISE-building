@@ -138,8 +138,8 @@ def calculate_state_slopes(puma_data, year):
                 def func_r(par, sh, dhw, ff):
                     err = ff - (
                         par[0] * sh
-                        + (sum_areaff_dhw * par[1] + const.dhw_lin_scalar * par[1] * dhw)
-                        + sum_areaff_other * par[2]
+                        + par[1] * (sum_areaff_dhw + const.dhw_lin_scalar * dhw)
+                        + par[2] * sum_areaff_other
                     )
                     return err
 
