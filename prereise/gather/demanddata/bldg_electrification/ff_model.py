@@ -227,7 +227,6 @@ if __name__ == "__main__":
     state_slopes_com.to_csv(
         os.path.join(data_dir, "state_slopes_ff_com.csv"), index=False
     )
-
     ##############################################
     # Space heating slope adjustment for climate #
     ##############################################
@@ -240,21 +239,17 @@ if __name__ == "__main__":
     # Create data frames for space heating fossil fuel usage slopes at each PUMA
     puma_slopes_res = pd.DataFrame(
         {"state": puma_data["state"], "puma": puma_data["puma"]}
-    )
+    ).set_index("state")
 
     puma_slopes_com = pd.DataFrame(
         {"state": puma_data["state"], "puma": puma_data["puma"]}
-    )
+    ).set_index("state")
 
     res_state_htg_slope = []
     com_state_htg_slope = []
     for state in puma_data["state"]:
-        res_state_htg_slope.append(
-            list(state_slopes_res.query("state == @state")["sh_slope"])[0]
-        )
-        com_state_htg_slope.append(
-            list(state_slopes_com.query("state == @state")["sh_slope"])[0]
-        )
+        res_state_htg_slope.append(state_slopes_res.loc[state, "sh_slope"])
+        com_state_htg_slope.append(state_slopes_com.loc[state, "sh_slope"])
 
     puma_slopes_res["htg_slope_res_mmbtu_m2_degC"] = res_state_htg_slope
     puma_slopes_com["htg_slope_com_mmbtu_m2_degC"] = com_state_htg_slope
