@@ -215,12 +215,11 @@ def calculate_state_slopes(puma_data, year):
     return state_slopes_res, state_slopes_com
 
 
-dir_path = os.path.dirname(os.path.abspath(__file__))
-
 if __name__ == "__main__":
+    year = 2010
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
-    state_slopes_res, state_slopes_com = calculate_state_slopes(const.puma_data)
+    state_slopes_res, state_slopes_com = calculate_state_slopes(const.puma_data, year)
     state_slopes_res.to_csv(
         os.path.join(data_dir, "state_slopes_ff_res.csv"), index=False
     )
@@ -231,7 +230,6 @@ if __name__ == "__main__":
     # Space heating slope adjustment for climate #
     ##############################################
 
-    year = 2010
     puma_data = pd.read_csv(os.path.join(data_dir, "puma_data.csv"), index_col=False)
     state_slopes_res.set_index("state", inplace=True)
     state_slopes_com.set_index("state", inplace=True)
@@ -260,7 +258,6 @@ if __name__ == "__main__":
     for state in const.state_list:
 
         # Load puma temperatures
-        yr_temps = 2010
         temps_pumas = pd.read_csv(
             f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state}_{year}.csv"
         )
