@@ -233,6 +233,8 @@ if __name__ == "__main__":
 
     year = 2010
     puma_data = pd.read_csv(os.path.join(data_dir, "puma_data.csv"), index_col=False)
+    state_slopes_res.set_index("state", inplace=True)
+    state_slopes_com.set_index("state", inplace=True)
 
     # Create data frames for space heating fossil fuel usage slopes at each PUMA
     puma_slopes_res = pd.DataFrame(
@@ -250,14 +252,14 @@ if __name__ == "__main__":
         puma_slopes_res.loc[df_index_res] = [
             state_it,
             puma_data["puma"][i],
-            list(state_slopes_res[state_slopes_res["state"] == state_it]["sh_slope"])[0],
+            state_slopes_res.loc[state_it, "sh_slope"],
         ]
 
         df_index_com = len(puma_slopes_com)
         puma_slopes_com.loc[df_index_com] = [
             state_it,
             puma_data["puma"][i],
-            list(state_slopes_com[state_slopes_com["state"] == state_it]["sh_slope"])[0],
+            state_slopes_com.loc[state_it, "sh_slope"],
         ]
 
     puma_data["hd_183C_2010"] = ""
