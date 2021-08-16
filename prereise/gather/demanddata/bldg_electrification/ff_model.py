@@ -244,7 +244,8 @@ if __name__ == "__main__":
         columns=(["state", "puma", "htg_slope_com_mmbtu_m2_degC"])
     )
 
-    # Fill above dataframes with each puma and their corresponding un-adjusted statewide heating slope
+    # Fill above dataframes with each puma and their corresponding un-adjusted statewide
+    # heating slope
     for i in range(len(puma_data)):
         state_it = puma_data["state"][i]
 
@@ -476,7 +477,8 @@ if __name__ == "__main__":
         return (
             (
                 a_model_slope_res_exp
-                + b_model_slope_res_exp * (1 - np.exp(-c_model_slope_res_exp * (x / 1000)))
+                + b_model_slope_res_exp
+                * (1 - np.exp(-c_model_slope_res_exp * (x / 1000)))
             )
             / (x / 1000)
         ) * 10 ** (-6)
@@ -485,7 +487,8 @@ if __name__ == "__main__":
         return (
             (
                 a_model_slope_com_exp
-                + b_model_slope_com_exp * (1 - np.exp(-c_model_slope_com_exp * (x / 1000)))
+                + b_model_slope_com_exp
+                * (1 - np.exp(-c_model_slope_com_exp * (x / 1000)))
             )
             / (x / 1000)
         ) * 10 ** (-6)
@@ -525,7 +528,8 @@ if __name__ == "__main__":
         )
         # Apply scalar to each puma
         adj_slope_res_list = list(
-            slope_scalar_res_it * puma_data_it["hdd65_normals_2010"].map(func_slope_res_exp)
+            slope_scalar_res_it
+            * puma_data_it["hdd65_normals_2010"].map(func_slope_res_exp)
         )
         for i in range(len(puma_data_it)):
             index_r = len(adj_slopes_res)
@@ -553,7 +557,8 @@ if __name__ == "__main__":
             )
         )
         adj_slope_com_list = list(
-            slope_scalar_com_it * puma_data_it["hdd65_normals_2010"].map(func_slope_com_exp)
+            slope_scalar_com_it
+            * puma_data_it["hdd65_normals_2010"].map(func_slope_com_exp)
         )
         for i in range(len(puma_data_it)):
             index_c = len(adj_slopes_com)
