@@ -425,7 +425,7 @@ if __name__ == "__main__":
     )
 
     # Minimize error between actual slopes and fitted function
-    ## Note for fitting to converge, hdd must be divided by 1000 and slopes in btu
+    # Note for fitting to converge, hdd must be divided by 1000 and slopes in btu
     def model(par, hdd_div1000, slope_btu):
         err = (
             slope_btu
