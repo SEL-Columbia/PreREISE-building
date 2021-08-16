@@ -217,21 +217,22 @@ def calculate_state_slopes(puma_data, year):
 
 
 if __name__ == "__main__":
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
     state_slopes_res, state_slopes_com = calculate_state_slopes(const.puma_data)
     state_slopes_res.to_csv(
-        os.path.join(dir_path, "data", "state_slopes_ff_res.csv"), index=False
+        os.path.join(data_dir, "state_slopes_ff_res.csv"), index=False
     )
     state_slopes_com.to_csv(
-        os.path.join(dir_path, "data", "state_slopes_ff_com.csv"), index=False
+        os.path.join(data_dir, "state_slopes_ff_com.csv"), index=False
     )
 
     ##############################################
     # Space heating slope adjustment for climate #
     ##############################################
 
-    puma_data = pd.read_csv(
-        os.path.join(dir_path, "data", "puma_data.csv"), index_col=False
-    )
+    year = 2010
+    puma_data = pd.read_csv(os.path.join(data_dir, "puma_data.csv"), index_col=False)
 
     # Create data frames for space heating fossil fuel usage slopes at each PUMA
     puma_slopes_res = pd.DataFrame(
@@ -289,10 +290,10 @@ if __name__ == "__main__":
 
     # Load in state groups consistent with building area scale adjustments
     area_scale_res = pd.read_csv(
-        os.path.join(dir_path, "data", "area_scale_res.csv"), index_col=False
+        os.path.join(data_dir, "area_scale_res.csv"), index_col=False
     )
     area_scale_com = pd.read_csv(
-        os.path.join(dir_path, "data", "area_scale_com.csv"), index_col=False
+        os.path.join(data_dir, "area_scale_com.csv"), index_col=False
     )
 
     # Extract res state groups from area_scale_res
@@ -564,9 +565,5 @@ if __name__ == "__main__":
             ]
 
     # Export climate adjusted space heating slopes of each puma
-    adj_slopes_res.to_csv(
-        os.path.join(dir_path, "data", "puma_slopes_ff_res.csv"), index=False
-    )
-    adj_slopes_com.to_csv(
-        os.path.join(dir_path, "data", "puma_slopes_ff_com.csv"), index=False
-    )
+    adj_slopes_res.to_csv(os.path.join(data_dir, "puma_slopes_ff_res.csv"), index=False)
+    adj_slopes_com.to_csv(os.path.join(data_dir, "puma_slopes_ff_com.csv"), index=False)
