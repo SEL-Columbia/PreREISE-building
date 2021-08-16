@@ -48,7 +48,6 @@ def calculate_state_slopes(puma_data, year):
     for state in const.state_list:
         # Load puma data
         puma_data_it = const.puma_data.query("state == @state")
-        n_tracts = len(puma_data_it)
 
         # Load puma temperatures
         temps_pumas = temps_pumas = pd.read_csv(
@@ -82,7 +81,6 @@ def calculate_state_slopes(puma_data, year):
                 )
 
             # sum of previous areas to be used in fitting
-            sum_areaff_sh = sum(areas_ff_sh_it)
             sum_areaff_dhw = sum(areas_ff_dhw_it)
             sum_areaff_other = sum(areas_ff_other_it)
             sum_areaff_cook = sum(areas_ff_cook_it)
