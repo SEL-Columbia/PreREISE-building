@@ -507,7 +507,7 @@ if __name__ == "__main__":
 
         # Residential Adjustments
         # Extract unadjusted heating slope for the given state and class
-        htg_slope_res_mmbtu_m2_degC_basis = list(
+        htg_slope_res_mmbtu_m2_degC_basis = list(  # noqa: N816
             state_slopes_res[state_slopes_res["state"] == state]["sh_slope"]
         )[0]
         # Calculate slope scalar based on hdd, hd, area, and frac_ff
@@ -537,7 +537,7 @@ if __name__ == "__main__":
             ]
 
         # Commercial Adjustments
-        htg_slope_com_mmbtu_m2_degC_basis = list(
+        htg_slope_com_mmbtu_m2_degC_basis = list(  # noqa: N816
             state_slopes_com[state_slopes_com["state"] == state]["sh_slope"]
         )[0]
         slope_scalar_com_it = htg_slope_com_mmbtu_m2_degC_basis / (
