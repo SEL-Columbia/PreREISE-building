@@ -433,7 +433,6 @@ if __name__ == "__main__":
         )
         return err
 
-
     # Least_squares residential model, to solve slope = (a + b*(1 - exp(-c*hdd)))/hdd
     ls_res = least_squares(
         model,
@@ -480,7 +479,6 @@ if __name__ == "__main__":
             / (x / 1000)
         ) * 10 ** (-6)
 
-
     def func_slope_com_exp(x):
         return (
             (
@@ -489,7 +487,6 @@ if __name__ == "__main__":
             )
             / (x / 1000)
         ) * 10 ** (-6)
-
 
     puma_data["htg_slope_res_mmbtu_m2_degC"] = ""
     puma_data["htg_slope_com_mmbtu_m2_degC"] = ""
