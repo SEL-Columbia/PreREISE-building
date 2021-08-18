@@ -247,9 +247,6 @@ if __name__ == "__main__":
     puma_slopes_res["htg_slope_res_mmbtu_m2_degC"] = res_state_htg_slope
     puma_slopes_com["htg_slope_com_mmbtu_m2_degC"] = com_state_htg_slope
 
-    puma_data["hd_183C_2010"] = ""
-    puma_data["hd_167C_2010"] = ""
-
     for state in const.state_list:
 
         # Load puma temperatures
@@ -428,44 +425,49 @@ if __name__ == "__main__":
 
     adj_slopes_com = pd.DataFrame({"state": puma_data["state"]})
 
-    slope_scalar_res = state_slopes_res.loc[puma_data["state"], "sh_slope"] / (
-        sum(
+    slope_scalar_res = state_slopes_res["sh_slope"] / (
+        (
             puma_data["hdd65_normals_2010"].map(func_slope_res_exp)
             * puma_data["hd_183C_2010"]
             * puma_data["res_area_2010_m2"]
             * puma_data["frac_ff_sh_res_2010"]
         )
-        / sum(
+        .groupby(puma_data["state"])
+        .sum()
+        / (
             puma_data["hd_183C_2010"]
             * puma_data["res_area_2010_m2"]
             * puma_data["frac_ff_sh_res_2010"]
         )
+        .groupby(puma_data["state"])
+        .sum()
     )
-    slope_scalar_res.index = puma_data.index
 
-    adj_slopes_res["htg_slope_res_mmbtu_m2_degC"] = slope_scalar_res * puma_data[
-        "hdd65_normals_2010"
-    ].map(func_slope_res_exp)
+    adj_slopes_res["htg_slope_res_mmbtu_m2_degC"] = puma_data["hdd65_normals_2010"].map(
+        func_slope_res_exp
+    ) * puma_data["state"].map(slope_scalar_res)
 
-    slope_scalar_com = state_slopes_com.loc[puma_data["state"], "sh_slope"] / (
-        sum(
+    slope_scalar_com = state_slopes_com["sh_slope"] / (
+        (
             puma_data["hdd65_normals_2010"].map(func_slope_com_exp)
             * puma_data["hd_167C_2010"]
             * puma_data["com_area_2010_m2"]
             * puma_data["frac_ff_sh_com_2010"]
         )
-        / sum(
+        .groupby(puma_data["state"])
+        .sum()
+        / (
             puma_data["hd_167C_2010"]
             * puma_data["com_area_2010_m2"]
             * puma_data["frac_ff_sh_com_2010"]
         )
+        .groupby(puma_data["state"])
+        .sum()
     )
 
-    slope_scalar_com.index = puma_data.index
-
-    adj_slopes_com["htg_slope_com_mmbtu_m2_degC"] = slope_scalar_com * puma_data[
-        "hdd65_normals_2010"
-    ].map(func_slope_com_exp)
+    adj_slopes_com["htg_slope_com_mmbtu_m2_degC"] = puma_data["hdd65_normals_2010"].map(
+        func_slope_com_exp
+    ) * puma_data["state"].map(slope_scalar_com)
 
     # Export climate adjusted space heating slopes of each puma
     adj_slopes_res.to_csv(os.path.join(data_dir, "puma_slopes_ff_res.csv"))
