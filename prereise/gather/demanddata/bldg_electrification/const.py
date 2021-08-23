@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 
 state_list = [
@@ -54,6 +55,8 @@ state_list = [
     "WY",
 ]
 
+classes = ["res", "com"]
+
 # Years with temperature data
 yr_temps_all = list(range(2008, 2018))
 yr_temps_first, yr_temps_last = yr_temps_all[0], yr_temps_all[-1]
@@ -70,8 +73,7 @@ puma_data = pd.read_csv(
 )
 
 # Reference temperatures for computations
-temp_ref_res = 18.3
-temp_ref_com = 16.7
+temp_ref = {"res": 18.3, "com": 16.7}
 
 # Unit conversions
 conv_kw_to_mw = 1 / 1000
@@ -116,3 +118,17 @@ cooking_multiplier = {
     ("res", "low"): 0.44,
     ("res", "high"): 0.26,
 }
+
+# Setting res hot water slope as 0.01x res hot water const
+dhw_lin_scalar = 0.01
+
+bounds_lower_res = [0, 0.00000959, 0.00000269]
+bounds_upper_res = [np.inf, 0.00001827, 0.00000864]
+
+# Setting com cooking const as 1.5x com hot water const
+cook_c_scalar = 1.5
+
+dhw_low_bound_com = 0.00000796
+dhw_high_bound_com = 0.00001858
+
+other_high_bound_com = 0.00000228
