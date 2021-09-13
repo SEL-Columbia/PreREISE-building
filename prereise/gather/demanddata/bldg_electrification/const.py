@@ -78,6 +78,8 @@ temp_ref = {"res": 18.3, "com": 16.7}
 # Unit conversions
 conv_kw_to_mw = 1 / 1000
 conv_mmbtu_to_kwh = 293.0711
+conv_m2_to_ft2 = 1 / (0.3048**2)
+conv_ft2_to_Bsf = 1 / (10**9)
 
 eff_htg_ff_base = 0.80  # Assumed efficiency of existing fossil fuel HTG
 eff_dhw_ff_base = 0.58  # Assumed efficiency of existing fossil fuel DHW
