@@ -30,27 +30,6 @@ def aggregate_puma_df(puma_fuel_2010, tract_puma_mapping):
         "cdd65_normals_2010",
     ]
 
-    # Load RECS and CBECS area scales for res and com
-    resscales = pd.read_csv(os.path.join(data_dir, "area_scale_res.csv"))
-    comscales = pd.read_csv(os.path.join(data_dir, "area_scale_com.csv"))
-
-    # Interpolate a 2010 area to scale model area to corresponding RECS/CBECS area
-    resscales["2010_scalar"] = (
-        resscales["RECS2009"]
-        + (resscales["RECS2015"] - resscales["RECS2009"])
-        * (
-            (const.target_year - const.recs_date_1)
-            / (const.recs_date_2 - const.recs_date_1)
-        )
-    ) / resscales["Model2010"]
-    comscales["2010_scalar"] = (
-        comscales["CBECS2003"]
-        + (comscales["CBECS2012"] - comscales["CBECS2003"])
-        * (
-            (const.target_year - const.cbecs_date_1)
-            / (const.cbecs_date_2 - const.cbecs_date_1)
-        )
-    ) / comscales["Model2010"]
 
     # Collect all state data into one data frame
     tract_data = pd.concat(
@@ -81,6 +60,28 @@ def aggregate_puma_df(puma_fuel_2010, tract_puma_mapping):
             weighted_elements.groupby(tract_puma_mapping["puma"]).sum()
             / tract_data["pop.2010"].groupby(tract_puma_mapping["puma"]).sum()
         )
+
+    # Load RECS and CBECS area scales for res and com
+    resscales = pd.read_csv(os.path.join(data_dir, "area_scale_res.csv"))
+    comscales = pd.read_csv(os.path.join(data_dir, "area_scale_com.csv"))
+
+    # Interpolate a 2010 area to scale model area to corresponding RECS/CBECS area
+    resscales["2010_scalar"] = (
+        resscales["RECS2009"]
+        + (resscales["RECS2015"] - resscales["RECS2009"])
+        * (
+            (const.target_year - const.recs_date_1)
+            / (const.recs_date_2 - const.recs_date_1)
+        )
+    ) / resscales["Model2010"]
+    comscales["2010_scalar"] = (
+        comscales["CBECS2003"]
+        + (comscales["CBECS2012"] - comscales["CBECS2003"])
+        * (
+            (const.target_year - const.cbecs_date_1)
+            / (const.cbecs_date_2 - const.cbecs_date_1)
+        )
+    ) / comscales["Model2010"]
 
     # Scale puma area from gbs to 2010 RECS/CBECS
     for state in const.state_list:
