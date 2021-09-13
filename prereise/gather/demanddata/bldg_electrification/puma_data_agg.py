@@ -69,6 +69,9 @@ def aggregate_puma_df(puma_fuel_2010, tract_puma_mapping):
     resscales["GBS"] = 0
     for i in range(len(resscales)):
         resscales.loc[i,"GBS"] = (tract_data.loc[tract_data['state'].isin(resscales.loc[i,:]), 'res.area.m2'].sum()) * const.conv_m2_to_ft2 * const.conv_ft2_to_Bsf 
+    comscales["GBS"] = 0
+    for i in range(len(comscales)):
+        comscales.loc[i,"GBS"] = (tract_data.loc[tract_data['state'].isin(comscales.loc[i,:]), 'com.area.m2'].sum()) * const.conv_m2_to_ft2 * const.conv_ft2_to_Bsf 
 
     # Interpolate a 2010 area to scale model area to corresponding RECS/CBECS area
     resscales["2010_scalar"] = (
