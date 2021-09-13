@@ -5,6 +5,7 @@ import geopandas as gpd
 import pandas as pd
 
 from prereise.gather.demanddata.bldg_electrification import const
+import const
 
 
 def aggregate_puma_df(puma_fuel_2010, tract_puma_mapping):
@@ -63,6 +64,11 @@ def aggregate_puma_df(puma_fuel_2010, tract_puma_mapping):
     # Load RECS and CBECS area scales for res and com
     resscales = pd.read_csv(os.path.join(data_dir, "area_scale_res.csv"))
     comscales = pd.read_csv(os.path.join(data_dir, "area_scale_com.csv"))
+    
+    # Compute GBS areas for state groups in RECS and CBECS
+    resscales["GBS"] = 0
+    for i in range(len(resscales)):
+        resscales.loc[i,"GBS"] = (tract_data.loc[tract_data['state'].isin(resscales.loc[i,:]), 'res.area.m2'].sum()) * const.conv_m2_to_ft2 * const.conv_ft2_to_Bsf 
 
     # Interpolate a 2010 area to scale model area to corresponding RECS/CBECS area
     resscales["2010_scalar"] = (
@@ -72,7 +78,7 @@ def aggregate_puma_df(puma_fuel_2010, tract_puma_mapping):
             (const.target_year - const.recs_date_1)
             / (const.recs_date_2 - const.recs_date_1)
         )
-    ) / resscales["Model2010"]
+    ) / resscales["GBS"]
     comscales["2010_scalar"] = (
         comscales["CBECS2003"]
         + (comscales["CBECS2012"] - comscales["CBECS2003"])
@@ -80,7 +86,7 @@ def aggregate_puma_df(puma_fuel_2010, tract_puma_mapping):
             (const.target_year - const.cbecs_date_1)
             / (const.cbecs_date_2 - const.cbecs_date_1)
         )
-    ) / comscales["Model2010"]
+    ) / comscales["GBS"]
 
     # Scale puma area from gbs to 2010 RECS/CBECS
     for state in const.state_list:
