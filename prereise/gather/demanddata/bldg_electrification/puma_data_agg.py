@@ -25,11 +25,10 @@ def aggregate_puma_df(puma_fuel_2010, tract_puma_mapping):
         "res_area_gbs_m2",
         "com_area_gbs_m2",
     ]
-    weighted_sum_columns = [
+    weighted_avg_columns = [
         "hdd65_normals_2010",
         "cdd65_normals_2010",
     ]
-
 
     # Collect all state data into one data frame
     tract_data = pd.concat(
@@ -53,7 +52,7 @@ def aggregate_puma_df(puma_fuel_2010, tract_puma_mapping):
         ].sum()
 
     # Population-weighted average hdd, cdd, and acpen
-    for col in weighted_sum_columns:
+    for col in weighted_avg_columns:
         col_to_sum = col.replace("_normals_2010", "").replace("_res_2010", ".res")
         weighted_elements = tract_data[col_to_sum] * tract_data["pop.2010"]
         puma_df[col] = (
