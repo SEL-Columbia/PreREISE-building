@@ -5,7 +5,6 @@ import geopandas as gpd
 import pandas as pd
 
 from prereise.gather.demanddata.bldg_electrification import const
-import const
 
 
 def aggregate_puma_df(puma_fuel_2010, tract_puma_mapping):
