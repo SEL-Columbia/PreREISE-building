@@ -245,8 +245,6 @@ if __name__ == "__main__":
     puma_df_frac_ff = scale_fuel_fractions(puma_df, const.regions, const.fuel)
 
     # Add time zone information
-    timezones_shp = gpd.GeoDataFrame(gpd.read_file(os.path.join(data_dir, "tz_us.shp")))
-    pumas_shp = gpd.GeoDataFrame(gpd.read_file(os.path.join(data_dir, "pumas.shp")))
     puma_timezones = pd.read_csv(
         os.path.join(data_dir, "puma_timezone.csv"), index_col="puma"
     )
