@@ -220,7 +220,7 @@ def puma_timezone_join(timezones, pumas):
     puma_timezone = puma_timezone.drop_duplicates(subset="GEOID10", keep="first")
     puma_timezone.sort_values("GEOID10", ascending=True, inplace=True)
 
-    return puma_timezone["tzid"]
+    return puma_timezone["TZID"]
 
 
 if __name__ == "__main__":
