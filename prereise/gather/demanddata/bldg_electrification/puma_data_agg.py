@@ -256,7 +256,13 @@ if __name__ == "__main__":
     # Load tract-level data for population
     tract_pop = pd.read_csv(os.path.join(data_dir, "tract_pop.csv"), index_col="tract")
 
-    puma_data_unscaled = aggregate_puma_df(puma_fuel_2010, tract_puma_mapping)
+    puma_data_unscaled = aggregate_puma_df(
+        puma_fuel_2010,
+        tract_puma_mapping,
+        tract_gbs_area,
+        tract_degday_normals,
+        tract_pop,
+    )
 
     puma_data = scale_fuel_fractions(puma_data_unscaled, const.regions, const.fuel)
 
