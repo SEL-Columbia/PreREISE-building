@@ -212,7 +212,7 @@ def scale_fuel_fractions(puma_df, regions, fuel):
                     f"frac_{u}_{c}_natgas",
                     f"frac_{u}_{c}_othergas",
                     f"frac_{u}_{c}_fok",
-                    ]
+                ]
             ].sum(axis=1)
             puma_df[f"frac_elec_{u}_{c}_2010"] = puma_df[f"frac_{u}_{c}_elec"]
     return puma_df
