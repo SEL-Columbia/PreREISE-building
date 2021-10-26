@@ -76,8 +76,10 @@ puma_data = pd.read_csv(
 temp_ref = {"res": 18.3, "com": 16.7}
 
 # Unit conversions
-conv_kw_to_mw = 1 / 1000
-conv_mmbtu_to_kwh = 293.0711
+conv_kw_to_mw = 1 / 1000  # Convert kW to MW
+conv_mmbtu_to_kwh = 293.0711  # Convert MMBtu (million Btu) to kWh
+conv_m2_to_ft2 = 1 / (0.3048 ** 2)  # Convert square meters to square feet
+conv_ft2_to_bsf = 1 / (10 ** 9)  # Convert square feet to billion square feet
 
 eff_htg_ff_base = 0.80  # Assumed efficiency of existing fossil fuel HTG
 eff_dhw_ff_base = 0.58  # Assumed efficiency of existing fossil fuel DHW
@@ -132,3 +134,53 @@ dhw_low_bound_com = 0.00000796
 dhw_high_bound_com = 0.00001858
 
 other_high_bound_com = 0.00000228
+
+recs_date_1 = 2009
+recs_date_2 = 2015
+
+cbecs_date_1 = 2003
+cbecs_date_2 = 2012
+
+target_year = 2010
+
+# Regions to differentiate fuel usage: NorthEast, MidWest, South, West. Defined by RECS/CBECS surveys
+regions = {
+    "northeast": ["CT", "MA", "ME", "NH", "NJ", "NY", "PA", "RI", "VT"],
+    "midwest": ["IA", "IL", "IN", "KS", "MI", "MN", "MO", "ND", "NE", "OH", "SD", "WI"],
+    "south": [
+        "AL",
+        "AR",
+        "DC",
+        "DE",
+        "FL",
+        "GA",
+        "KY",
+        "LA",
+        "MD",
+        "MS",
+        "NC",
+        "OK",
+        "SC",
+        "TN",
+        "TX",
+        "VA",
+        "WV",
+    ],
+    "west": [
+        "AK",
+        "AZ",
+        "CA",
+        "CO",
+        "HI",
+        "ID",
+        "MT",
+        "NM",
+        "NV",
+        "OR",
+        "UT",
+        "WA",
+        "WY",
+    ],
+}
+
+fuel = ["natgas", "fok", "othergas", "elec"]
