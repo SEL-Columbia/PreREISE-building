@@ -8,11 +8,11 @@ from prereise.gather.demanddata.bldg_electrification import const
 
 
 def aggregate_puma_df(
-    puma_fuel_2010, tract_puma_mapping, tract_gbs_area, tract_degday_normals, tract_pop
+    puma_states, tract_puma_mapping, tract_gbs_area, tract_degday_normals, tract_pop
 ):
     """Scale census tract data up to puma areas.
 
-    :param pandas.DataFrame puma_fuel_2010: household fuel type by puma.
+    :param pandas.DataFrame puma_states: mapping of puma to state.
     :param pandas.DataFrame tract_puma_mapping: tract to puma mapping.
     :param pandas.DataFrame tract_gbs_area: General Building Stock area for residential, commercial, industrial areas by tract
     :param pandas.DataFrame tract_degday_normals: heating and cooling degree day normals by tract
@@ -22,7 +22,7 @@ def aggregate_puma_df(
         fractions.
     """
     # Set up puma_df data frame
-    puma_df = puma_fuel_2010["state"].to_frame()
+    puma_df = puma_states.to_frame()
 
     # Combine tract-level data into single data frame with only census tracts with building area data
     tract_data = pd.concat(
@@ -110,111 +110,72 @@ def aggregate_puma_df(
             puma_df[puma_df["state"] == state]["com_area_gbs_m2"] * com_scalar
         )
 
-    # Calculate res fractions of fuel usage based off puma_fuel_2010 household data
-    puma_df["frac_sh_res_natgas"] = (
-        puma_fuel_2010["hh_utilgas"] / puma_fuel_2010["hh_total"]
-    )
-    puma_df["frac_sh_res_fok"] = puma_fuel_2010["hh_fok"] / puma_fuel_2010["hh_total"]
-    puma_df["frac_sh_res_othergas"] = (
-        puma_fuel_2010["hh_othergas"] / puma_fuel_2010["hh_total"]
-    )
-    puma_df["frac_sh_res_coal"] = puma_fuel_2010["hh_coal"] / puma_fuel_2010["hh_total"]
-    puma_df["frac_sh_res_wood"] = puma_fuel_2010["hh_wood"] / puma_fuel_2010["hh_total"]
-    puma_df["frac_sh_res_solar"] = (
-        puma_fuel_2010["hh_solar"] / puma_fuel_2010["hh_total"]
-    )
-    puma_df["frac_sh_res_elec"] = puma_fuel_2010["hh_elec"] / puma_fuel_2010["hh_total"]
-    puma_df["frac_sh_res_other"] = (
-        puma_fuel_2010["hh_other"] / puma_fuel_2010["hh_total"]
-    )
-    puma_df["frac_sh_res_none"] = puma_fuel_2010["hh_none"] / puma_fuel_2010["hh_total"]
-
     return puma_df
 
 
-def scale_fuel_fractions(puma_df, regions, fuel):
+def scale_fuel_fractions(hh_fuels, puma_df, year=2010):
     """Scale census tract data up to puma areas.
 
+    :param pandas.DataFrame hh_fuels: household fuel type by puma.
     :param pandas.DataFrame puma_df: output of :func:`aggregate_puma_df`.
-    :param list of lists regions: state regions used to scale fuel fractions.
-    :param list fuel: types of fuel.
+    :param int/str year: year to use within label when creating columns.
     :return: (*pandas.DataFrame*) -- fractions of natural gas, fuel oil and kerosone,
         propane, and electricity used for space heating, hot water, cooking, and other
         in residential and commercial buildings.
     """
+    # Calculate res fractions of fuel usage based off puma_fuel_2010 household data
+    puma_df["frac_sh_res_natgas"] = hh_fuels["hh_utilgas"] / hh_fuels["hh_total"]
+    for f in ["fok", "othergas", "coal", "wood", "solar", "elec", "other", "none"]:
+        puma_df[f"frac_sh_res_{f}"] = hh_fuels[f"hh_{f}"] / hh_fuels["hh_total"]
+
+    region_map = {state: r for r, states in const.regions.items() for state in states}
+    puma_region_groups = puma_df.groupby(puma_df["state"].map(region_map))
     for c in const.classes:
-        if c == "res":
-            uselist = ["dhw", "other"]
-        else:
-            uselist = ["sh", "dhw", "cook"]
-        for u in uselist:
-            frac_area = pd.DataFrame(columns=fuel)
-
-            # Compute frac_area for each fuel type in each region
-            for i in regions:
-                fuellist = []
-                for j in fuel:
-                    region_df = puma_df[puma_df["state"].isin(i)].reset_index()
-                    fuellist.append(
-                        sum(
-                            region_df[f"frac_sh_res_{j}"]
-                            * region_df[f"{c}_area_2010_m2"]
-                        )
-                        / sum(region_df[f"{c}_area_2010_m2"])
+        # Compute area fraction for each fuel type (column) in each region (index)
+        area_fractions = puma_region_groups.apply(
+            lambda x: pd.Series(
+                {
+                    f: (
+                        (x[f"frac_sh_res_{f}"] * x[f"{c}_area_2010_m2"]).sum()
+                        / x[f"{c}_area_2010_m2"].sum()
                     )
-                df_i = len(frac_area)
-                frac_area.loc[df_i] = fuellist
-
-            # Values calculated externally
-            frac_scale = pd.read_csv(os.path.join(data_dir, f"frac_target_{u}_{c}.csv"))
-
-            downscalar = frac_scale / frac_area
-
-            upscalar = (frac_scale - frac_area) / (1 - frac_area)
-
-            # Scale frac_hh_fuel to frac_com_fuel
-            for f in fuel:
-                scalar = 1
-                fraccom = []
-                for i in range(len(puma_df)):
-                    for j in range(len(regions)):
-                        if puma_df["state"][i] in regions[j]:
-                            region_index = j
-                    if downscalar[f][region_index] <= 1:
-                        scalar = downscalar[f][region_index]
-                        fraccom.append(puma_df[f"frac_sh_res_{f}"][i] * scalar)
+                    for f in const.fuel
+                }
+            )
+        )
+        # Scale per-PUMA values to match target regional values (calculated externally)
+        uselist = ["dhw", "other"] if c == "res" else ["sh", "dhw", "cook"]
+        for u in uselist:
+            area_fraction_targets = pd.read_csv(
+                os.path.join(data_dir, f"frac_target_{u}_{c}.csv"),
+                index_col=0,
+            )
+            down_scale = area_fraction_targets / area_fractions
+            up_scale = (area_fraction_targets - area_fractions) / (1 - area_fractions)
+            for r in const.regions:
+                for f in const.fuel:
+                    pre_scaling = puma_region_groups.get_group(r)[f"frac_sh_res_{f}"]
+                    if down_scale.loc[r, f] <= 1:
+                        scaled = pre_scaling * down_scale.loc[r, f]
                     else:
-                        scalar = upscalar[f][region_index]
-                        fraccom.append(
-                            (1 - puma_df[f"frac_sh_res_{f}"][i]) * scalar
-                            + puma_df[f"frac_sh_res_{f}"][i]
-                        )
-                puma_df[f"frac_{u}_{c}_{f}"] = fraccom
+                        scaled = pre_scaling + up_scale.loc[r, f] * (1 - pre_scaling)
+                    puma_df.loc[pre_scaling.index, f"frac_{f}_{u}_{c}_{year}"] = scaled
 
     # Sum coal, wood, solar and other fractions for frac_com_other
-    puma_df["frac_sh_com_other"] = puma_df[
-        [
-            "frac_sh_res_coal",
-            "frac_sh_res_wood",
-            "frac_sh_res_solar",
-            "frac_sh_res_other",
-        ]
-    ].sum(axis=1)
+    named_sh_com_fuels = {"elec", "fok", "natgas", "othergas"}
+    named_sh_com_cols = [f"frac_{f}_sh_com_{year}" for f in named_sh_com_fuels]
+    puma_df[f"frac_other_sh_com_{year}"] = 1 - puma_df[named_sh_com_cols].sum(axis=1)
 
+    # Copy residential space heating columns to match new column naming convention
+    puma_df = puma_df.assign(
+        **{f"frac_{f}_sh_res_{year}": puma_df[f"frac_sh_res_{f}"] for f in const.fuel}
+    )
+    fossil_fuels = {"natgas", "othergas", "fok"}
     for c in const.classes:
-        if c == "res":
-            uselist = ["sh", "dhw", "other"]
-        else:
-            uselist = ["sh", "dhw", "cook"]
+        uselist = ["sh", "dhw", "other"] if c == "res" else ["sh", "dhw", "cook"]
         for u in uselist:
-            puma_df[f"frac_ff_{u}_{c}_2010"] = puma_df[
-                [
-                    f"frac_{u}_{c}_natgas",
-                    f"frac_{u}_{c}_othergas",
-                    f"frac_{u}_{c}_fok",
-                ]
-            ].sum(axis=1)
-            puma_df[f"frac_elec_{u}_{c}_2010"] = puma_df[f"frac_{u}_{c}_elec"]
+            fossil_cols = [f"frac_{f}_{u}_{c}_{year}" for f in fossil_fuels]
+            puma_df[f"frac_ff_{u}_{c}_{year}"] = puma_df[fossil_cols].sum(axis=1)
     return puma_df
 
 
@@ -261,14 +222,14 @@ if __name__ == "__main__":
     tract_pop = pd.read_csv(os.path.join(data_dir, "tract_pop.csv"), index_col="tract")
 
     puma_data_unscaled = aggregate_puma_df(
-        puma_fuel_2010,
+        puma_fuel_2010["state"],
         tract_puma_mapping,
         tract_gbs_area,
         tract_degday_normals,
         tract_pop,
     )
 
-    puma_data = scale_fuel_fractions(puma_data_unscaled, const.regions, const.fuel)
+    puma_data = scale_fuel_fractions(puma_fuel_2010, puma_data_unscaled)
 
     # Add time zone information
     puma_timezones = pd.read_csv(
