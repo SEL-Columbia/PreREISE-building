@@ -6,12 +6,19 @@
 
 import os
 
+import cdsapi
 import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.spatial import cKDTree
 
 from prereise.gather.demanddata.bldg_electrification import const
+
+variable_names = {
+    "temp": {"era5": "2m_temperature", "nc": "t2m"},
+    "dewpt": {"era5": "2m_dewpoint_temperature", "nc": "d2m"},
+    "pres": {"era5": "surface_pressure", "nc": "sp"},
+}
 
 
 def era5_download(years, directory, variable="temp"):
@@ -24,17 +31,16 @@ def era5_download(years, directory, variable="temp"):
         temp {Default} -- dry bulb temperataure, corresponds to ERA5 variable "2m_temperature"
         dewpt -- dew point temperature, corresponds to ERA5 variable "2m_dewpoint_temperature"
         pres -- surface pressure, corresponds to ERA5 variable "surface_pressure"
+    :raises ValueError: if the ``variable`` name is invalid or if any values in
+        ``years`` are outside of the valid range.
+    :raises Exception: if the cdsapi package is not configured properly.
     """
 
     # Check variable input and get associated ERA5 variable name
-    if variable == "temp":
-        variable_era5 = "2m_temperature"
-    elif variable == "dewpt":
-        variable_era5 = "2m_dewpoint_temperature"
-    elif variable == "pres":
-        variable_era5 = "surface_pressure"
-    else:
-        raise ValueError("Invalid variable name")
+    try:
+        variable_era5 = variable_names[variable]["era5"]
+    except KeyError:
+        raise ValueError(f"Invalid variable name: {variable}")
 
     # Make single year input iterable
     if not hasattr(years, "__iter__"):
@@ -50,12 +56,12 @@ def era5_download(years, directory, variable="temp"):
             "Data for years 1950-1979 are a preliminary version of reanalysis back extension"
         )
 
-    import cdsapi
-
-    """ Requires `cdsapi` to be installed per:
-        https://cds.climate.copernicus.eu/api-how-to
-        """
-    c = cdsapi.Client()
+    try:
+        c = cdsapi.Client()
+    except Exception:
+        raise Exception(
+            "cdsapi is not configured properly, see https://cds.climate.copernicus.eu/api-how-to"
+        )
 
     # Create folder to store data for given variable if it doesn't yet exist
     os.makedirs(os.path.join(directory, variable), exist_ok=True)
@@ -93,28 +99,40 @@ def create_era5_pumas(
         CONUS states and input year(s)
 
     :param iterable year: year(s) for which data files to be produced
-    :param pandas.DataFrame tract_puma_mapping: tract to puma mapping.
-    :param pandas.DataFrame tract_pop: population by tract
-    :param pandas.DataFrame tract_lat_lon: latitutde and longitude of tract
+    :param pandas.Series tract_puma_mapping: tract to puma mapping.
+    :param pandas.Series tract_pop: population, indexed by tract.
+    :param pandas.DataFrame tract_lat_lon: data frame, indexed by tract, with columns
+        'state', 'lat', and 'lon'.
     :param str directory: path to root directory for ERA5 downloads (not including variable name)
     :param str: variable to produce
         temp {Default} -- dry bulb temperataure, corresponds to ERA5 variable "2m_temperature"
         dewpt -- dew point temperature, corresponds to ERA5 variable "2m_dewpoint_temperature"
         pres -- surface pressure, corresponds to ERA5 variable "surface_pressure"
+    :raises ValueError: if the ``variable`` name is invalid.
+    :raises FileNotFoundError: if not all required files are present.
     """
+    # Function to convert latitude and longitude to cartesian coordinates
+    def lon_lat_to_cartesian(lon, lat):
+
+        # WGS 84 reference coordinate system parameters
+        a = 6378.137  # major axis [km]
+        e2 = 6.69437999014e-3  # eccentricity squared
+
+        lon_rad = np.radians(lon)
+        lat_rad = np.radians(lat)
+        # convert to cartesian coordinates
+        r_n = a / (np.sqrt(1 - e2 * (np.sin(lat_rad) ** 2)))
+        x = r_n * np.cos(lat_rad) * np.cos(lon_rad)
+        y = r_n * np.cos(lat_rad) * np.sin(lon_rad)
+        z = r_n * (1 - e2) * np.sin(lat_rad)
+        return x, y, z
 
     # Check variable input and get associated ERA5 variable name
-    if variable == "temp":
-        variable_era5 = "2m_temperature"
-        variable_nc = "t2m"
-    elif variable == "dewpt":
-        variable_era5 = "2m_dewpoint_temperature"
-        variable_nc = "d2m"
-    elif variable == "pres":
-        variable_era5 = "surface_pressure"
-        variable_nc = "sp"
-    else:
-        raise ValueError("Variable name input is not supported")
+    try:
+        variable_era5 = variable_names[variable]["era5"]
+        variable_nc = variable_names[variable]["nc"]
+    except KeyError:
+        raise ValueError(f"Invalid variable name: {variable}")
 
     # Make single year input iterable
     if not hasattr(years, "__iter__"):
@@ -134,17 +152,12 @@ def create_era5_pumas(
         print("Confirmed: All required ERA5 input files present")
 
     # Create folder to store data for given variable if it doesn't yet exist
-    os.makedirs(os.path.join(directory, "pumas"), exist_ok=True)
+    os.makedirs(os.path.join(directory, "pumas", f"{variable}s"), exist_ok=True)
 
-    # Combine tract-level data into single data frame with only census tracts with building area data in included states
-    tract_data = pd.concat([tract_lat_lon, tract_pop], axis=1, join="inner")
-    tract_data = tract_data.loc[:, ~tract_data.columns.duplicated()]
+    # Combine tract-level data into single data frame
+    tract_data = tract_lat_lon.assign(pop_2010=tract_pop, puma=tract_puma_mapping)
+    # Filter to census tracts with building area data in included states
     tract_data = tract_data[tract_data["state"].isin(const.state_list)]
-
-    # Include tract_puma_mapping only for tracts in tract_data
-    tract_puma_mapping = tract_puma_mapping[
-        tract_puma_mapping["tract"].isin(tract_data["tract"])
-    ]
 
     # Loop through input years
     for year in years:
@@ -159,22 +172,6 @@ def create_era5_pumas(
         lons_era5 = ds_era5.variables["longitude"][:]
         lons_era5_2d, lats_era5_2d = np.meshgrid(lons_era5, lats_era5)
 
-        # Function to convert latitude and longitude to cartesian coordinates
-        def lon_lat_to_cartesian(lon, lat):
-
-            # WGS 84 reference coordinate system parameters
-            a = 6378.137  # major axis [km]
-            e2 = 6.69437999014e-3  # eccentricity squared
-
-            lon_rad = np.radians(lon)
-            lat_rad = np.radians(lat)
-            # convert to cartesian coordinates
-            r_n = a / (np.sqrt(1 - e2 * (np.sin(lat_rad) ** 2)))
-            x = r_n * np.cos(lat_rad) * np.cos(lon_rad)
-            y = r_n * np.cos(lat_rad) * np.sin(lon_rad)
-            z = r_n * (1 - e2) * np.sin(lat_rad)
-            return x, y, z
-
         x_era5, y_era5, z_era5 = lon_lat_to_cartesian(
             lons_era5_2d.flatten(), lats_era5_2d.flatten()
         )
@@ -188,44 +185,27 @@ def create_era5_pumas(
         # Create tracts values time series data frame with interpoltion using inverse distance-squared weighting for 4 nearest neighbors
         d, inds = tree_era5.query(np.column_stack((x_tracts, y_tracts, z_tracts)), k=4)
         w = 1.0 / d ** 2
-        vals_tracts_series = pd.Series(range(0, 8760)).apply(
-            lambda x: np.sum(w * ds_era5[variable_nc][x].values.flatten()[inds], axis=1)
-            / np.sum(w, axis=1)
+        vals_tracts = pd.Series(range(0, 8760)).apply(
+            lambda x: pd.Series(
+                (w * ds_era5[variable_nc][x].values.flatten()[inds]).sum(axis=1)
+                / w.sum(axis=1),
+                index=tract_data.index,
+            )
         )
-        vals_tracts = pd.DataFrame.from_dict(
-            dict(zip(vals_tracts_series.index, vals_tracts_series.values))
-        ).T
-        vals_tracts.columns = tract_data.tract
 
+        state_pumas = const.puma_data.groupby("state")
+
+        weighted_values = tract_data.groupby("puma").apply(
+            lambda x: (vals_tracts[x.index] * x["pop_2010"]).sum(axis=1)
+            / x["pop_2010"].sum()
+        )
+        # Convert units if needed (Kelvin to Celsius)
+        if variable in {"temp", "dewpt"}:
+            weighted_values -= 273.15
         # Loop through states
         for state in const.state_list:
-
-            # Initiate vals_pumas data frame
-            vals_pumas_it = pd.DataFrame(
-                columns=const.puma_data.query("state == @state").index
-            )
-            # Loop through and compute population-weighted temperature time series
-            for p in vals_pumas_it.columns:
-                vals_tracts_p = vals_tracts[
-                    tract_puma_mapping["tract"][p == (tract_puma_mapping["puma"])]
-                ]
-                pop_weights_p = tract_data["pop_2010"][
-                    tract_data["tract"].isin(
-                        tract_puma_mapping["tract"][p == (tract_puma_mapping["puma"])]
-                    )
-                ]
-                pop_weights_p.index = vals_tracts_p.columns
-                vals_pumas_it[p] = (
-                    vals_tracts_p.mul(pop_weights_p, axis=1).sum(axis=1)
-                    / pop_weights_p.sum()
-                )
-
-            # Convert units if needed
-            if variable in {"temp", "dewpt"}:
-                vals_pumas_it = vals_pumas_it - 273.15
-
-            # Save file for variable/state/year
-            vals_pumas_it.to_csv(
+            state_values = weighted_values.loc[state_pumas.get_group(state).index]
+            state_values.T.to_csv(
                 os.path.join(
                     directory,
                     "pumas",
