@@ -11,8 +11,8 @@ hours_utc = pd.date_range(
     start=f"{year}-01-01", end=f"{year+1}-01-01", freq="H", tz="UTC"
 )[:-1]
 
-load_name = "NYIS-ZONJ"
-zone_name = "N.Y.C."
+load_name = "LDWP"
+zone_name = "LADWP"
 zone_load = pd.read_csv(
     f"https://besciences.blob.core.windows.net/datasets/bldg_el/zone_loads_{year}/{load_name}_demand_{year}_UTC.csv"
 )["demand.mw"]
@@ -30,13 +30,12 @@ def bkpt_scale(df, num_points, bkpt, heat_cool):
     :return: (*float*) bkpt -- updated breakpoint. Original breakpoint if size of initial df >= num_points
     """
 
-    dft = df[df["temp_c"] < bkpt] if heat_cool == "heat" else df[df["temp_c"] > bkpt]
-    while len(dft) < num_points:
-        bkpt = (bkpt + 0.1) if heat_cool == "heat" else (bkpt - 0.1)
-        dft = (
-            df[df["temp_c"] < bkpt] if heat_cool == "heat" else df[df["temp_c"] > bkpt]
-        )
-    return dft.reset_index(), bkpt
+    dft = df[df["temp_c"] <= bkpt].reset_index() if heat_cool == "heat" else df[df["temp_c"] >= bkpt].reset_index()
+    if len(dft) < num_points:
+        dft = df.sort_values(by=["temp_c"]).head(num_points).reset_index() if heat_cool == "heat" else df.sort_values(by=["temp_c"]).tail(num_points).reset_index()
+        bkpt = dft["temp_c"][num_points - 1] if heat_cool == "heat" else dft["temp_c"][0]
+
+    return dft.sort_index(), bkpt
 
 
 def zone_shp_overlay(zone_name):
@@ -219,6 +218,7 @@ def hourly_load_fit(load_df):
             load_temp_hr_heat, t_bpc = bkpt_scale(
                 load_temp_hr, numpoints, t_bpc_start, "heat"
             )
+            
             load_temp_hr_cool, t_bph = bkpt_scale(
                 load_temp_hr, numpoints, t_bph_start, "cool"
             )
@@ -436,6 +436,5 @@ def plot_profile(profile, actual):
         + str(round(mrae * 100, 2))
         + "%"
     )
-
 
 plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load)
