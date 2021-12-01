@@ -184,7 +184,7 @@ def puma_timezone_latlong(timezones, pumas):
 
     :param geopandas.DataFrame timezones: US timezones.
     :param geopandas.DataFrame pumas: US pumas.
-    
+
     :return: (*pandas.Series*) -- timezone for every puma.
     :return: (*pandas.DataFrame*) -- latitude and longitude for every puma.
     """
@@ -193,8 +193,14 @@ def puma_timezone_latlong(timezones, pumas):
     puma_timezone.sort_values("area", ascending=False, inplace=True)
     puma_timezone = puma_timezone.drop_duplicates(subset="GEOID10", keep="first")
     puma_timezone.sort_values("GEOID10", ascending=True, inplace=True)
-    
-    puma_lat_long = pd.DataFrame({"puma": "puma_" + pumas["GEOID10"], "latitude": [float(pumas["INTPTLAT10"][i]) for i in range(len(pumas))], "longitude": [float(pumas["INTPTLON10"][i]) for i in range(len(pumas))]})
+
+    puma_lat_long = pd.DataFrame(
+        {
+            "puma": "puma_" + pumas["GEOID10"],
+            "latitude": [float(pumas["INTPTLAT10"][i]) for i in range(len(pumas))],
+            "longitude": [float(pumas["INTPTLON10"][i]) for i in range(len(pumas))],
+        }
+    )
     puma_lat_long = puma_lat_long.set_index("puma")
 
     return puma_timezone["tzid"], puma_lat_long
@@ -241,11 +247,14 @@ if __name__ == "__main__":
         os.path.join(data_dir, "puma_timezone.csv"), index_col="puma"
     )
     puma_data["timezone"] = puma_timezones["timezone"]
-    
+
     # Add latitude and longitude information
     puma_lat_long = pd.read_csv(
         os.path.join(data_dir, "puma_lat_long.csv"), index_col="puma"
     )
-    puma_data['latitude'], puma_data['longitude'] = puma_lat_long['latitude'], puma_lat_long['longitude']
+    puma_data["latitude"], puma_data["longitude"] = (
+        puma_lat_long["latitude"],
+        puma_lat_long["longitude"],
+    )
 
     puma_data.to_csv(os.path.join(data_dir, "puma_data.csv"))
