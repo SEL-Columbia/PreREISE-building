@@ -6,17 +6,6 @@ from scipy.stats import linregress
 from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 
-year = 2019
-hours_utc = pd.date_range(
-    start=f"{year}-01-01", end=f"{year+1}-01-01", freq="H", tz="UTC"
-)[:-1]
-
-load_name = "LDWP"
-zone_name = "LADWP"
-zone_load = pd.read_csv(
-    f"https://besciences.blob.core.windows.net/datasets/bldg_el/zone_loads_{year}/{load_name}_demand_{year}_UTC.csv"
-)["demand.mw"]
-
 
 def bkpt_scale(df, num_points, bkpt, heat_cool):
     """Adjust heating or cooling breakpoint to ensure there are enough data points to fit.
@@ -71,19 +60,18 @@ def zone_shp_overlay(zone_name):
     return puma_data_zone
 
 
-puma_data_zone = zone_shp_overlay(zone_name)
-
-
-def zonal_data(puma_data):
+def zonal_data(puma_data, hours_utc, zone_load):
     """Aggregate puma metrics to population weighted hourly zonal values
 
     :param pandas.DataFrame puma_data: puma data within zone, output of zone_shp_overlay()
+    :param pandas.DatetimeIndex hours_utc: index of UTC hours.
+    :param pandas.Series zone_load: hourly demand for a given zone.
 
     :return: (*pandas.DataFrame*) load_temp_df -- hourly zonal values of temperature, wetbulb temperature, and darkness fraction
     """
     puma_pop_weights = (
-        puma_data_zone["pop_2010"] * puma_data_zone["frac_in_zone"]
-    ) / sum(puma_data_zone["pop_2010"] * puma_data_zone["frac_in_zone"])
+        puma_data["pop_2010"] * puma_data["frac_in_zone"]
+    ) / sum(puma_data["pop_2010"] * puma_data["frac_in_zone"])
     zone_states = list(set(puma_data["state"]))
     timezone = max(
         set(list(puma_data["timezone"])), key=list(puma_data["timezone"]).count
@@ -150,9 +138,6 @@ def zonal_data(puma_data):
     )
 
     return load_temp_df
-
-
-load_temp_df = zonal_data(puma_data_zone)
 
 
 def hourly_load_fit(load_df):
@@ -312,28 +297,30 @@ def hourly_load_fit(load_df):
     return hourly_fits_df, s_wb_db, i_wb_db
 
 
-hourly_fits_df, s_wb_db, i_wb_db = hourly_load_fit(load_temp_df)
-
-
-def temp_to_energy(temp, temp_wb, dark_frac, hour):
+def temp_to_energy(load_temp_series, hourly_fits_df, s_wb_db, i_wb_db):
     """Compute baseload, heating, and cooling electricity for a certain hour of year
 
-    :param float temp: drybulb temperature
-    :param float temp_wb: wetbulb temperature
-    :param float dark_frac: darkness fraction
-    :param int hour: hour of year
+    :param pandas.Series load_temp_series: data for the given hour.
+    :param pandas.DataFrame hourly_fits_df: hourly and week/weekend breakpoints and
+        coefficients for electricity use equations.
+    :param float s_wb_db: slope of fit between dry and wet bulb temperatures of zone.
+    :param float i_wb_db: intercept of fit between dry and wet bulb temperatures of zone.
 
     :return: (*list*) -- [baseload, heating, cooling]
     """
+    temp = load_temp_series["temp_c"]
+    temp_wb = load_temp_series["temp_c_wb"]
+    dark_frac = load_temp_series["hourly_dark_frac"]
+    zone_hour = load_temp_series["hour_local"]
 
-    zone_hour = load_temp_df["hour_local"][hour]
     heat_eng = 0
     cool_cool_eng = 0
     cool_hot_humid_eng = 0
     cool_hot_dry_eng = 0
+
     wk_wknd = (
         "wk"
-        if load_temp_df["weekday"][hour] < 5 and load_temp_df["holiday"][hour] == False
+        if load_temp_series["weekday"] < 5 and load_temp_series["holiday"] == False
         else "wknd"
     )
 
@@ -385,30 +372,6 @@ def temp_to_energy(temp, temp_wb, dark_frac, hour):
     return [base_eng, heat_eng, cool_hot_humid_eng + cool_hot_dry_eng + cool_cool_eng]
 
 
-zone_profile_load_MWh = pd.DataFrame({"hour_utc": list(range(len(hours_utc)))})
-energy_list = zone_profile_load_MWh.hour_utc.apply(
-    lambda x: temp_to_energy(
-        load_temp_df["temp_c"][x],
-        load_temp_df["temp_c_wb"][x],
-        load_temp_df["hourly_dark_frac"][x],
-        x,
-    )
-)
-(
-    zone_profile_load_MWh["base_load_mw"],
-    zone_profile_load_MWh["heat_load_mw"],
-    zone_profile_load_MWh["cool_load_mw"],
-    zone_profile_load_MWh["total_load_mw"],
-) = (
-    energy_list.apply(lambda x: x[0]),
-    energy_list.apply(lambda x: x[1]),
-    energy_list.apply(lambda x: x[2]),
-    energy_list.apply(lambda x: sum(x)),
-)
-zone_profile_load_MWh = zone_profile_load_MWh.set_index("hour_utc")
-zone_profile_load_MWh.to_csv(f"Profiles/{load_name}_profile_load_mw_{year}.csv")
-
-
 def plot_profile(profile, actual):
     """Plot profile vs. actual load
 
@@ -437,4 +400,51 @@ def plot_profile(profile, actual):
         + "%"
     )
 
-plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load)
+
+def main(load_name, zone_name, year):
+    """Run profile generator for one zone for one year.
+
+    :param str load_name: name of load zone used to save profile.
+    :param str zone_name: name of load zone within shapefile.
+    :param int year: profile year to calculate.
+    """
+    zone_load = pd.read_csv(
+        f"https://besciences.blob.core.windows.net/datasets/bldg_el/zone_loads_{year}/{load_name}_demand_{year}_UTC.csv"
+    )["demand.mw"]
+    hours_utc = pd.date_range(
+        start=f"{year}-01-01", end=f"{year+1}-01-01", freq="H", tz="UTC"
+    )[:-1]
+
+    puma_data_zone = zone_shp_overlay(zone_name)
+
+    load_temp_df = zonal_data(puma_data_zone, hours_utc, zone_load)
+
+    hourly_fits_df, s_wb_db, i_wb_db = hourly_load_fit(load_temp_df)
+
+    zone_profile_load_MWh = pd.DataFrame({"hour_utc": list(range(len(hours_utc)))})
+    energy_list = zone_profile_load_MWh.hour_utc.apply(
+        lambda x: temp_to_energy(load_temp_df.loc[x], hourly_fits_df, s_wb_db, i_wb_db)
+    )
+    (
+        zone_profile_load_MWh["base_load_mw"],
+        zone_profile_load_MWh["heat_load_mw"],
+        zone_profile_load_MWh["cool_load_mw"],
+        zone_profile_load_MWh["total_load_mw"],
+    ) = (
+        energy_list.apply(lambda x: x[0]),
+        energy_list.apply(lambda x: x[1]),
+        energy_list.apply(lambda x: x[2]),
+        energy_list.apply(lambda x: sum(x)),
+    )
+    zone_profile_load_MWh = zone_profile_load_MWh.set_index("hour_utc")
+    zone_profile_load_MWh.to_csv(f"Profiles/{load_name}_profile_load_mw_{year}.csv")
+
+    plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load)
+
+
+if __name__ == "__main__":
+    # Constants to be used when running this file as a script
+    year = 2019
+    load_name = "LDWP"
+    zone_name = "LADWP"
+    main(load_name, zone_name, year)
