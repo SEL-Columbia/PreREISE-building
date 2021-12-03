@@ -149,43 +149,10 @@ def hourly_load_fit(load_df):
     :return: (*float*) s_wb_db, i_wb_db -- slope and intercept of fit between dry and wet bulb temperatures of zone
     """
 
-    hourly_fits_df = pd.DataFrame(
-        index=[[i for i in range(24)]],
-        columns=[
-            "t.bpc.wk",
-            "t.bpc.wknd",
-            "t.bph.wk",
-            "t.bph.wknd",
-            "i.heat.wk",
-            "s.heat.wk",
-            "s.dark.wk",
-            "i.cool.wk",
-            "i.cool.wk.db.only",
-            "s.cool.wk.db",
-            "s.cool.wk.wb",
-            "s.cool.wk.db.only",
-            "i.heat.wknd",
-            "s.heat.wknd",
-            "s.dark.wknd",
-            "i.cool.wknd",
-            "i.cool.wknd.db.only",
-            "s.cool.wknd.db",
-            "s.cool.wknd.wb",
-            "s.cool.wknd.db.only",
-        ],
-    )
-    t_bpc_start = 10
-    t_bph_start = 18.3
-
-    db_wb_regr_df = load_df[
-        (load_df["temp_c"] >= t_bpc_start) & (load_df["temp_c"] <= t_bph_start)
-    ]
-    s_wb_db, i_wb_db, r_wb_db, pval_wb_db, stderr_wb_db = linregress(
-        db_wb_regr_df["temp_c"], db_wb_regr_df["temp_c_wb"]
-    )
-    for wk_wknd in ["wk", "wknd"]:
-        for i in range(len(hourly_fits_df)):
-            daily_points = 8
+    def make_hourly_series(load_df, i):
+        daily_points = 8
+        result = {}
+        for wk_wknd in ["wk", "wknd"]:
             if wk_wknd == "wk":
                 load_temp_hr = load_df[
                     (load_df["hour_local"] == i)
@@ -266,33 +233,31 @@ def hourly_load_fit(load_df):
                 if -i_cool_db_only / s_cool_db_only > t_bph
                 else t_bph
             )
+            result[wk_wknd] = {
+                f"t.bpc.{wk_wknd}": t_bpc,
+                f"t.bph.{wk_wknd}": t_bph,
+                f"i.heat.{wk_wknd}": i_heat,
+                f"s.heat.{wk_wknd}": s_heat,
+                f"s.dark.{wk_wknd}": s_dark,
+                f"i.cool.{wk_wknd}": i_cool,
+                f"i.cool.{wk_wknd}.db.only": i_cool_db_only,
+                f"s.cool.{wk_wknd}.db": s_cool_db,
+                f"s.cool.{wk_wknd}.wb": s_cool_wb,
+                f"s.cool.{wk_wknd}.db.only": s_cool_db_only,
+            }
+        return pd.Series({**result["wk"], **result["wknd"]})
 
-            hourly_fits_df.loc[
-                i,
-                [
-                    f"t.bpc.{wk_wknd}",
-                    f"t.bph.{wk_wknd}",
-                    f"i.heat.{wk_wknd}",
-                    f"s.heat.{wk_wknd}",
-                    f"s.dark.{wk_wknd}",
-                    f"i.cool.{wk_wknd}",
-                    f"i.cool.{wk_wknd}.db.only",
-                    f"s.cool.{wk_wknd}.db",
-                    f"s.cool.{wk_wknd}.wb",
-                    f"s.cool.{wk_wknd}.db.only",
-                ],
-            ] = [
-                t_bpc,
-                t_bph,
-                i_heat,
-                s_heat,
-                s_dark,
-                i_cool,
-                i_cool_db_only,
-                s_cool_db,
-                s_cool_wb,
-                s_cool_db_only,
-            ]
+    t_bpc_start = 10
+    t_bph_start = 18.3
+
+    db_wb_regr_df = load_df[
+        (load_df["temp_c"] >= t_bpc_start) & (load_df["temp_c"] <= t_bph_start)
+    ]
+    s_wb_db, i_wb_db, r_wb_db, pval_wb_db, stderr_wb_db = linregress(
+        db_wb_regr_df["temp_c"], db_wb_regr_df["temp_c_wb"]
+    )
+
+    hourly_fits_df = pd.DataFrame([make_hourly_series(load_df, i) for i in range(24)])
 
     return hourly_fits_df, s_wb_db, i_wb_db
 
@@ -336,16 +301,16 @@ def temp_to_energy(load_temp_series, hourly_fits_df, s_wb_db, i_wb_db):
         i_cool_db_only,
         s_cool_db_only,
     ) = (
-        hourly_fits_df.at[zone_hour, f"t.bpc.{wk_wknd}"][0],
-        hourly_fits_df.at[zone_hour, f"t.bph.{wk_wknd}"][0],
-        hourly_fits_df.at[zone_hour, f"i.heat.{wk_wknd}"][0],
-        hourly_fits_df.at[zone_hour, f"s.heat.{wk_wknd}"][0],
-        hourly_fits_df.at[zone_hour, f"s.dark.{wk_wknd}"][0],
-        hourly_fits_df.at[zone_hour, f"i.cool.{wk_wknd}"][0],
-        hourly_fits_df.at[zone_hour, f"s.cool.{wk_wknd}.db"][0],
-        hourly_fits_df.at[zone_hour, f"s.cool.{wk_wknd}.wb"][0],
-        hourly_fits_df.at[zone_hour, f"i.cool.{wk_wknd}.db.only"][0],
-        hourly_fits_df.at[zone_hour, f"s.cool.{wk_wknd}.db.only"][0],
+        hourly_fits_df.at[zone_hour, f"t.bpc.{wk_wknd}"],
+        hourly_fits_df.at[zone_hour, f"t.bph.{wk_wknd}"],
+        hourly_fits_df.at[zone_hour, f"i.heat.{wk_wknd}"],
+        hourly_fits_df.at[zone_hour, f"s.heat.{wk_wknd}"],
+        hourly_fits_df.at[zone_hour, f"s.dark.{wk_wknd}"],
+        hourly_fits_df.at[zone_hour, f"i.cool.{wk_wknd}"],
+        hourly_fits_df.at[zone_hour, f"s.cool.{wk_wknd}.db"],
+        hourly_fits_df.at[zone_hour, f"s.cool.{wk_wknd}.wb"],
+        hourly_fits_df.at[zone_hour, f"i.cool.{wk_wknd}.db.only"],
+        hourly_fits_df.at[zone_hour, f"s.cool.{wk_wknd}.db.only"],
     )
 
     base_eng = s_heat * t_bph + s_dark * dark_frac + i_heat
