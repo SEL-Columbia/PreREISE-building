@@ -27,20 +27,20 @@ def bkpt_scale(df, num_points, bkpt, heat_cool):
     return dft.sort_index(), bkpt
 
 
-def zone_shp_overlay(zone_name):
+def zone_shp_overlay(zone_name_shp):
     """Select pumas within a zonal load area
 
-    :param str zone_name: name of zone in BA_map.shp
+    :param str zone_name_shp: name of zone in BA_map.shp
 
     :return: (*pandas.DataFrame*) puma_data_zone -- puma data of all pumas within zone, including fraction within zone
     """
 
     shapefile = gpd.GeoDataFrame(gpd.read_file("shapefiles/BA_map.shp"))
-    zone_shp = shapefile[shapefile["BA"] == zone_name]
+    zone_shp = shapefile[shapefile["BA"] == zone_name_shp]
     pumas_shp = gpd.GeoDataFrame(gpd.read_file("shapefiles/pumas_overlay.shp"))
 
     puma_zone = gpd.overlay(pumas_shp, zone_shp.to_crs("EPSG:4269"))
-    puma_zone["area"] = puma_zone.area
+    puma_zone["area"] = puma_zone["geometry"].to_crs({"proj":"cea"}).area 
     puma_zone["puma"] = "puma_" + puma_zone["GEOID10"]
 
     puma_zone["area_frac"] = [
@@ -60,14 +60,13 @@ def zone_shp_overlay(zone_name):
     return puma_data_zone
 
 
-def zonal_data(puma_data, hours_utc, zone_load):
+def zonal_data(puma_data, hours_utc):
     """Aggregate puma metrics to population weighted hourly zonal values
 
     :param pandas.DataFrame puma_data: puma data within zone, output of zone_shp_overlay()
     :param pandas.DatetimeIndex hours_utc: index of UTC hours.
-    :param pandas.Series zone_load: hourly demand for a given zone.
 
-    :return: (*pandas.DataFrame*) load_temp_df -- hourly zonal values of temperature, wetbulb temperature, and darkness fraction
+    :return: (*pandas.DataFrame*) temp_df -- hourly zonal values of temperature, wetbulb temperature, and darkness fraction
     """
     puma_pop_weights = (
         puma_data["pop_2010"] * puma_data["frac_in_zone"]
@@ -114,9 +113,8 @@ def zonal_data(puma_data, hours_utc, zone_load):
         )
     )
 
-    load_temp_df = pd.DataFrame(
+    temp_df = pd.DataFrame(
         {
-            "load_mw": zone_load,
             "temp_c": puma_hourly_temps[puma_hourly_temps.index.isin(puma_data.index)]
             .mul(puma_pop_weights, axis=0)
             .sum(axis=0),
@@ -137,33 +135,34 @@ def zonal_data(puma_data, hours_utc, zone_load):
         }
     )
 
-    return load_temp_df
+    return temp_df
 
 
-def hourly_load_fit(load_df):
+def hourly_load_fit(load_temp_df):
     """Fit hourly heating, cooling, and baseload functions to load data
 
-    :param pandas.DataFrame load_df: hourly load and temperature data
+    :param pandas.DataFrame load_temp_df: hourly load and temperature data
 
     :return: (*pandas.DataFrame*) hourly_fits_df -- hourly and week/weekend breakpoints and coefficients for electricity use equations
     :return: (*float*) s_wb_db, i_wb_db -- slope and intercept of fit between dry and wet bulb temperatures of zone
     """
+    
 
-    def make_hourly_series(load_df, i):
+    def make_hourly_series(load_temp_df, i):
         daily_points = 8
         result = {}
         for wk_wknd in ["wk", "wknd"]:
             if wk_wknd == "wk":
-                load_temp_hr = load_df[
-                    (load_df["hour_local"] == i)
-                    & (load_df["weekday"] < 5)
-                    & (load_df["holiday"] == False)
+                load_temp_hr = load_temp_df[
+                    (load_temp_df["hour_local"] == i)
+                    & (load_temp_df["weekday"] < 5)
+                    & (load_temp_df["holiday"] == False)
                 ].reset_index()
                 numpoints = daily_points * 5
             elif wk_wknd == "wknd":
-                load_temp_hr = load_df[
-                    (load_df["hour_local"] == i)
-                    & ((load_df["weekday"] >= 5) | (load_df["holiday"] == True))
+                load_temp_hr = load_temp_df[
+                    (load_temp_df["hour_local"] == i)
+                    & ((load_temp_df["weekday"] >= 5) | (load_temp_df["holiday"] == True))
                 ].reset_index()
                 numpoints = daily_points * 2
 
@@ -197,7 +196,7 @@ def hourly_load_fit(load_df):
                 load_temp_hr_heat["temp_c"], load_temp_hr_heat["load_mw"]
             )
 
-            if s_dark < 0 or s_dark > 400:
+            if s_dark < 0 or (max(load_temp_hr_heat['hourly_dark_frac']) - min(load_temp_hr_heat['hourly_dark_frac'])) < 0.3:
                 s_dark, s_heat, i_heat = 0, s_heat_only, i_heat_only
 
             load_temp_hr_cool["cool_load_mw"] = [
@@ -206,13 +205,15 @@ def hourly_load_fit(load_df):
                 - s_dark * load_temp_hr_cool["hourly_dark_frac"][j]
                 for j in range(len(load_temp_hr_cool))
             ]
+            
+            load_temp_hr_cool["temp_c_wb_diff"] = load_temp_hr_cool["temp_c_wb"] - (db_wb_fit[0]*load_temp_hr_cool["temp_c"]**2 + db_wb_fit[1]*load_temp_hr_cool["temp_c"] + db_wb_fit[2])
 
             lm_cool = LinearRegression().fit(
                 np.array(
                     [
                         [
                             load_temp_hr_cool["temp_c"][i],
-                            load_temp_hr_cool["temp_c_wb"][i],
+                            load_temp_hr_cool["temp_c_wb_diff"][i],
                         ]
                         for i in range(len(load_temp_hr_cool))
                     ]
@@ -224,13 +225,10 @@ def hourly_load_fit(load_df):
                 lm_cool.coef_[1],
                 lm_cool.intercept_,
             )
-            s_cool_db_only, i_cool_db_only, r_cool, pval_cool, stderr_cool = linregress(
-                load_temp_hr_cool["temp_c"], load_temp_hr_cool["cool_load_mw"]
-            )
-
+            
             t_bph = (
-                -i_cool_db_only / s_cool_db_only
-                if -i_cool_db_only / s_cool_db_only > t_bph
+                -i_cool / s_cool_db
+                if -i_cool / s_cool_db > t_bph
                 else t_bph
             )
             result[wk_wknd] = {
@@ -240,29 +238,26 @@ def hourly_load_fit(load_df):
                 f"s.heat.{wk_wknd}": s_heat,
                 f"s.dark.{wk_wknd}": s_dark,
                 f"i.cool.{wk_wknd}": i_cool,
-                f"i.cool.{wk_wknd}.db.only": i_cool_db_only,
                 f"s.cool.{wk_wknd}.db": s_cool_db,
                 f"s.cool.{wk_wknd}.wb": s_cool_wb,
-                f"s.cool.{wk_wknd}.db.only": s_cool_db_only,
             }
         return pd.Series({**result["wk"], **result["wknd"]})
 
+    
     t_bpc_start = 10
     t_bph_start = 18.3
 
-    db_wb_regr_df = load_df[
-        (load_df["temp_c"] >= t_bpc_start) & (load_df["temp_c"] <= t_bph_start)
-    ]
-    s_wb_db, i_wb_db, r_wb_db, pval_wb_db, stderr_wb_db = linregress(
-        db_wb_regr_df["temp_c"], db_wb_regr_df["temp_c_wb"]
-    )
+    db_wb_regr_df = load_temp_df[load_temp_df["temp_c"] >= t_bpc_start]
+    
+    db_wb_fit = np.polyfit(db_wb_regr_df["temp_c"], db_wb_regr_df["temp_c_wb"], 2)
+    
+    hourly_fits_df = pd.DataFrame([make_hourly_series(load_temp_df, i) for i in range(24)])
 
-    hourly_fits_df = pd.DataFrame([make_hourly_series(load_df, i) for i in range(24)])
-
-    return hourly_fits_df, s_wb_db, i_wb_db
+    return hourly_fits_df, db_wb_fit
 
 
-def temp_to_energy(load_temp_series, hourly_fits_df, s_wb_db, i_wb_db):
+
+def temp_to_energy(temp_series, hourly_fits_df, db_wb_fit):
     """Compute baseload, heating, and cooling electricity for a certain hour of year
 
     :param pandas.Series load_temp_series: data for the given hour.
@@ -273,19 +268,18 @@ def temp_to_energy(load_temp_series, hourly_fits_df, s_wb_db, i_wb_db):
 
     :return: (*list*) -- [baseload, heating, cooling]
     """
-    temp = load_temp_series["temp_c"]
-    temp_wb = load_temp_series["temp_c_wb"]
-    dark_frac = load_temp_series["hourly_dark_frac"]
-    zone_hour = load_temp_series["hour_local"]
+    temp = temp_series["temp_c"]
+    temp_wb = temp_series["temp_c_wb"]
+    dark_frac = temp_series["hourly_dark_frac"]
+    zone_hour = temp_series["hour_local"]
 
     heat_eng = 0
-    cool_cool_eng = 0
-    cool_hot_humid_eng = 0
-    cool_hot_dry_eng = 0
+    mid_cool_eng = 0
+    cool_eng = 0
 
     wk_wknd = (
         "wk"
-        if load_temp_series["weekday"] < 5 and load_temp_series["holiday"] == False
+        if temp_series["weekday"] < 5 and temp_series["holiday"] == False
         else "wknd"
     )
 
@@ -298,8 +292,6 @@ def temp_to_energy(load_temp_series, hourly_fits_df, s_wb_db, i_wb_db):
         i_cool,
         s_cool_db,
         s_cool_wb,
-        i_cool_db_only,
-        s_cool_db_only,
     ) = (
         hourly_fits_df.at[zone_hour, f"t.bpc.{wk_wknd}"],
         hourly_fits_df.at[zone_hour, f"t.bph.{wk_wknd}"],
@@ -309,8 +301,7 @@ def temp_to_energy(load_temp_series, hourly_fits_df, s_wb_db, i_wb_db):
         hourly_fits_df.at[zone_hour, f"i.cool.{wk_wknd}"],
         hourly_fits_df.at[zone_hour, f"s.cool.{wk_wknd}.db"],
         hourly_fits_df.at[zone_hour, f"s.cool.{wk_wknd}.wb"],
-        hourly_fits_df.at[zone_hour, f"i.cool.{wk_wknd}.db.only"],
-        hourly_fits_df.at[zone_hour, f"s.cool.{wk_wknd}.db.only"],
+
     )
 
     base_eng = s_heat * t_bph + s_dark * dark_frac + i_heat
@@ -318,23 +309,14 @@ def temp_to_energy(load_temp_series, hourly_fits_df, s_wb_db, i_wb_db):
     if temp <= t_bph:
         heat_eng = -s_heat * (t_bph - temp)
 
-    if temp >= t_bph and temp_wb >= i_wb_db + s_wb_db * t_bph:
-        cool_hot_humid_eng = s_cool_db * temp + s_cool_wb * temp_wb + i_cool
-
-    if temp >= t_bph and temp_wb < i_wb_db + s_wb_db * t_bph:
-        cool_hot_dry_eng = s_cool_db_only * temp + i_cool_db_only
+    if temp >= t_bph:
+        cool_eng = s_cool_db * temp + s_cool_wb * (temp_wb - (db_wb_fit[0]*temp**2 + db_wb_fit[1]*temp + db_wb_fit[2])) + i_cool
 
     if temp > t_bpc and temp < t_bph:
-        cool_cool_eng = (
-            (
-                (i_cool_db_only + s_cool_db_only * t_bph)
-                / (s_cool_db_only * (t_bph - t_bpc))
-            )
-            * ((temp - t_bpc) ** 2 / (t_bph - t_bpc))
-            * s_cool_db_only
-        )
+                
+        mid_cool_eng = ((temp - t_bpc) / (t_bph - t_bpc))**2 * (s_cool_db * t_bph + s_cool_wb * (temp_wb - (db_wb_fit[0]*temp**2 + db_wb_fit[1]*temp + db_wb_fit[2])) + i_cool)
 
-    return [base_eng, heat_eng, cool_hot_humid_eng + cool_hot_dry_eng + cool_cool_eng]
+    return [base_eng, heat_eng, max(cool_eng,0) + max(mid_cool_eng,0)]
 
 
 def plot_profile(profile, actual):
@@ -366,29 +348,39 @@ def plot_profile(profile, actual):
     )
 
 
-def main(load_name, zone_name, year):
+def main(zone_name, zone_name_shp, load_year, year):
     """Run profile generator for one zone for one year.
 
-    :param str load_name: name of load zone used to save profile.
-    :param str zone_name: name of load zone within shapefile.
+    :param str zone_name: name of load zone used to save profile.
+    :param str zone_name_shp: name of load zone within shapefile.
     :param int year: profile year to calculate.
     """
     zone_load = pd.read_csv(
-        f"https://besciences.blob.core.windows.net/datasets/bldg_el/zone_loads_{year}/{load_name}_demand_{year}_UTC.csv"
+        f"https://besciences.blob.core.windows.net/datasets/bldg_el/zone_loads_{year}/{zone_name}_demand_{year}_UTC.csv"
     )["demand.mw"]
+    hours_utc_load_year = pd.date_range(
+        start=f"{load_year}-01-01", end=f"{load_year+1}-01-01", freq="H", tz="UTC"
+    )[:-1]
+    
     hours_utc = pd.date_range(
         start=f"{year}-01-01", end=f"{year+1}-01-01", freq="H", tz="UTC"
     )[:-1]
 
-    puma_data_zone = zone_shp_overlay(zone_name)
+    puma_data_zone = zone_shp_overlay(zone_name_shp)
 
-    load_temp_df = zonal_data(puma_data_zone, hours_utc, zone_load)
+    temp_df_load_year = zonal_data(puma_data_zone, hours_utc_load_year)
+        
+    temp_df = zonal_data(puma_data_zone, hours_utc)
+    
+    temp_df_load_year["load_mw"] = zone_load
 
-    hourly_fits_df, s_wb_db, i_wb_db = hourly_load_fit(load_temp_df)
+    hourly_fits_df, db_wb_fit = hourly_load_fit(temp_df_load_year)
+    hourly_fits_df.to_csv(f"dayhour_fits/{zone_name}_dayhour_fits_{year}.csv")
+
 
     zone_profile_load_MWh = pd.DataFrame({"hour_utc": list(range(len(hours_utc)))})
     energy_list = zone_profile_load_MWh.hour_utc.apply(
-        lambda x: temp_to_energy(load_temp_df.loc[x], hourly_fits_df, s_wb_db, i_wb_db)
+        lambda x: temp_to_energy(temp_df.loc[x], hourly_fits_df, db_wb_fit)
     )
     (
         zone_profile_load_MWh["base_load_mw"],
@@ -402,7 +394,7 @@ def main(load_name, zone_name, year):
         energy_list.apply(lambda x: sum(x)),
     )
     zone_profile_load_MWh = zone_profile_load_MWh.set_index("hour_utc")
-    zone_profile_load_MWh.to_csv(f"Profiles/{load_name}_profile_load_mw_{year}.csv")
+    zone_profile_load_MWh.to_csv(f"Profiles/{zone_name}_profile_load_mw_{year}.csv")
 
     plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load)
 
@@ -410,6 +402,7 @@ def main(load_name, zone_name, year):
 if __name__ == "__main__":
     # Constants to be used when running this file as a script
     year = 2019
-    load_name = "LDWP"
-    zone_name = "LADWP"
-    main(load_name, zone_name, year)
+    load_year = 2019
+    zone_name = "NYIS-ZOND"
+    zone_name_shp = "North"
+    main(zone_name, zone_name_shp, load_year, year)
