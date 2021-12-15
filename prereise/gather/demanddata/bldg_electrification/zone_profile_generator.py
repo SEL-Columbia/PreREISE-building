@@ -149,7 +149,7 @@ def hourly_load_fit(load_temp_df):
     
 
     def make_hourly_series(load_temp_df, i):
-        daily_points = 8
+        daily_points = 10
         result = {}
         for wk_wknd in ["wk", "wknd"]:
             if wk_wknd == "wk":
@@ -241,6 +241,27 @@ def hourly_load_fit(load_temp_df):
                 f"s.cool.{wk_wknd}.db": s_cool_db,
                 f"s.cool.{wk_wknd}.wb": s_cool_wb,
             }
+            
+            
+            plt.rcParams.update({'font.size': 20})
+            fig, ax = plt.subplots(figsize  = (20, 10))
+            if wk_wknd == 'wk':
+                wk_graph = load_temp_df[(load_temp_df['hour_local'] == i) & (load_temp_df['weekday'] < 5) & (load_temp_df['holiday'] == False)] 
+            else:
+                wk_graph = load_temp_df[(load_temp_df['hour_local'] == i) & ((load_temp_df['weekday'] >= 5) | (load_temp_df['holiday'] == True))] 
+            
+            load_temp_hr_cool_func = wk_graph[(wk_graph['temp_c'] < t_bph) & (wk_graph['temp_c'] > t_bpc)].reset_index() 
+            
+            plt.scatter(wk_graph['temp_c'], wk_graph['load_mw'],color='black')
+            plt.scatter(load_temp_hr_heat['temp_c'], load_temp_hr_heat['temp_c']*s_heat + load_temp_hr_heat['hourly_dark_frac']*s_dark + i_heat,color='red')
+            plt.scatter(load_temp_hr_cool['temp_c'], [max(load_temp_hr_cool['temp_c'][i]*s_cool_db + (load_temp_hr_cool['temp_c_wb'][i] - (db_wb_fit[0]*load_temp_hr_cool['temp_c'][i]**2 + db_wb_fit[1]*load_temp_hr_cool['temp_c'][i] + db_wb_fit[2]))*s_cool_wb + i_cool, 0) + t_bph*s_heat + load_temp_hr_cool['hourly_dark_frac'][i]*s_dark + i_heat for i in range(len(load_temp_hr_cool))], color='blue')
+            plt.scatter(load_temp_hr_cool_func['temp_c'], [max(((load_temp_hr_cool_func['temp_c'][i] - t_bpc) / (t_bph - t_bpc))**2 * (t_bph*s_cool_db + (load_temp_hr_cool_func['temp_c_wb'][i] - (db_wb_fit[0]*load_temp_hr_cool_func['temp_c'][i]**2 + db_wb_fit[1]*load_temp_hr_cool_func['temp_c'][i] + db_wb_fit[2]))*s_cool_wb + i_cool), 0) + load_temp_hr_cool_func['temp_c'][i]*s_heat + load_temp_hr_cool_func['hourly_dark_frac'][i]*s_dark + i_heat for i in range(len(load_temp_hr_cool_func))],color='green')
+            
+            plt.title(f'zone {zone_name}, hour {i}, {wk_wknd} \n t_bpc = ' + round(t_bpc, 2) + '  t_bph = ' + round(t_bph, 2))        
+            plt.xlabel('Temp (°C)')
+            plt.ylabel('Load (MW)')
+            
+            
         return pd.Series({**result["wk"], **result["wknd"]})
 
     
@@ -333,9 +354,9 @@ def plot_profile(profile, actual):
     )
 
     fig, ax = plt.subplots(figsize=(20, 10))
-    plt.plot(list(profile.index), profile)
-    plt.plot(list(actual.index), actual)
-    plt.legend(["Profile", "Actual"])
+    plt.plot(list(profile.index), (profile - actual)/actual)
+    #plt.plot(list(actual.index), actual)
+    plt.legend(["Profile - Actual %"])#, "Actual"])
     plt.xlabel("Hour")
     plt.ylabel("MW")
     plt.title(
@@ -369,16 +390,16 @@ def main(zone_name, zone_name_shp, load_year, year):
     puma_data_zone = zone_shp_overlay(zone_name_shp)
 
     temp_df_load_year = zonal_data(puma_data_zone, hours_utc_load_year)
-        
-    temp_df = zonal_data(puma_data_zone, hours_utc)
-    
+            
     temp_df_load_year["load_mw"] = zone_load
 
     hourly_fits_df, db_wb_fit = hourly_load_fit(temp_df_load_year)
     hourly_fits_df.to_csv(f"dayhour_fits/{zone_name}_dayhour_fits_{year}.csv")
 
-
     zone_profile_load_MWh = pd.DataFrame({"hour_utc": list(range(len(hours_utc)))})
+    
+    temp_df = zonal_data(puma_data_zone, hours_utc)
+
     energy_list = zone_profile_load_MWh.hour_utc.apply(
         lambda x: temp_to_energy(temp_df.loc[x], hourly_fits_df, db_wb_fit)
     )
@@ -403,6 +424,6 @@ if __name__ == "__main__":
     # Constants to be used when running this file as a script
     year = 2019
     load_year = 2019
-    zone_name = "NYIS-ZOND"
-    zone_name_shp = "North"
+    zone_name = "LDWP"
+    zone_name_shp = "LADWP"
     main(zone_name, zone_name_shp, load_year, year)
