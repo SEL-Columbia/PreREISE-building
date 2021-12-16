@@ -138,8 +138,8 @@ def generate_profiles(yr_temps, bldg_class, hp_model, output_folder="Profiles"):
 
         pumalist = (
             puma_slopes_it[f"htg_slope_{bldg_class}_mmbtu_m2_degC"]
-            * puma_data_it[f"{bldg_class}_area_2010_m2"]
-            * puma_data_it[f"frac_ff_sh_{bldg_class}_2010"]
+            * puma_data_it[f"{bldg_class}_area_{const.base_year}_m2"]
+            * puma_data_it[f"frac_ff_sh_{bldg_class}_{const.base_year}"]
             * (const.conv_mmbtu_to_kwh * const.conv_kw_to_mw)
             * const.eff_htg_ff_base
         )

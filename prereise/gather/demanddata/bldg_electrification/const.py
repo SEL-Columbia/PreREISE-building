@@ -138,10 +138,10 @@ other_high_bound_com = 0.00000228
 recs_date_1 = 2009
 recs_date_2 = 2015
 
-cbecs_date_1 = 2003
-cbecs_date_2 = 2012
+cbecs_date_1 = 2012
+cbecs_date_2 = 2018
 
-target_year = 2010
+base_year = 2019
 
 # Regions to differentiate fuel usage: NorthEast, MidWest, South, West. Defined by RECS/CBECS surveys
 regions = {

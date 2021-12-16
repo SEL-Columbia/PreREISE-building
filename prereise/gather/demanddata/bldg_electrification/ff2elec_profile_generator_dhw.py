@@ -145,8 +145,8 @@ def generate_profiles(yr_temps=2016, bldg_class="res", hp_model="advperfhp"):
         temp_dev_cop *= dhw_mult_df
 
         ff_area_scalars = list(
-            puma_data_it["{}_area_2010_m2".format(bldg_class)]
-            * puma_data_it["frac_ff_dhw_{}_2010".format(bldg_class)]
+            puma_data_it[f"{bldg_class}_area_{const.base_year}_m2"]
+            * puma_data_it[f"frac_ff_dhw_{bldg_class}_{const.base_year}"]
             * (const.conv_mmbtu_to_kwh * const.conv_kw_to_mw)
         )
 
