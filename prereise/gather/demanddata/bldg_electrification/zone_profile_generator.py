@@ -76,6 +76,14 @@ def zonal_data(puma_data, hours_utc):
         set(list(puma_data["timezone"])), key=list(puma_data["timezone"]).count
     )
 
+    stats = pd.Series(data=[sum(puma_data["pop_2010"]), sum(puma_data["res_area_2010_m2"]), sum(puma_data["com_area_2010_m2"]), sum(puma_data["ind_area_gbs_m2"]),
+                            sum(puma_data["res_area_2010_m2"]*puma_data["frac_elec_sh_res_2010"])/sum(puma_data["res_area_2010_m2"]), sum(puma_data["res_area_2010_m2"]*puma_data["AC_penetration"])/sum(puma_data["res_area_2010_m2"]),
+                            sum(puma_data["com_area_2010_m2"]*puma_data["frac_elec_sh_com_2010"])/sum(puma_data["com_area_2010_m2"]), sum(puma_data["res_area_2010_m2"]*puma_data["frac_elec_dhw_res_2010"])/sum(puma_data["res_area_2010_m2"]), sum(puma_data["com_area_2010_m2"]*puma_data["frac_elec_dhw_com_2010"])/sum(puma_data["com_area_2010_m2"]),
+                            sum(puma_data["res_area_2010_m2"]*puma_data["frac_elec_other_res_2010"])/sum(puma_data["res_area_2010_m2"]), sum(puma_data["com_area_2010_m2"]*puma_data["frac_elec_cook_com_2010"])/sum(puma_data["com_area_2010_m2"]),
+                            sum(puma_data["hdd65_normals_2010"]*puma_data["pop_2010"]/sum(puma_data["pop_2010"])),
+                            sum(puma_data["cdd65_normals_2010"]*puma_data["pop_2010"]/sum(puma_data["pop_2010"]))],
+                      index=["pop_2010", "res_area_m2_2010", "com_area_m2_2010", "ind_area_m2_gbs_2010", "frac_elec_res_heat_2010", "frac_elec_res_cool_2010", "frac_elec_com_heat_2010", "frac_elec_dhw_res_2010", "frac_elec_dhw_com_2010", "frac_elec_other_res_2010", "frac_elec_cook_com_2010","hdd65_2010", "cdd65_2010"])
+
     puma_hourly_temps = pd.concat(
         list(
             pd.Series(data=zone_states).apply(
@@ -135,7 +143,7 @@ def zonal_data(puma_data, hours_utc):
         }
     )
 
-    return temp_df
+    return temp_df, stats
 
 
 def hourly_load_fit(load_temp_df):
@@ -147,7 +155,6 @@ def hourly_load_fit(load_temp_df):
     :return: (*float*) s_wb_db, i_wb_db -- slope and intercept of fit between dry and wet bulb temperatures of zone
     """
     
-
     def make_hourly_series(load_temp_df, i):
         daily_points = 10
         result = {}
@@ -231,18 +238,9 @@ def hourly_load_fit(load_temp_df):
                 if -i_cool / s_cool_db > t_bph
                 else t_bph
             )
-            result[wk_wknd] = {
-                f"t.bpc.{wk_wknd}": t_bpc,
-                f"t.bph.{wk_wknd}": t_bph,
-                f"i.heat.{wk_wknd}": i_heat,
-                f"s.heat.{wk_wknd}": s_heat,
-                f"s.dark.{wk_wknd}": s_dark,
-                f"i.cool.{wk_wknd}": i_cool,
-                f"s.cool.{wk_wknd}.db": s_cool_db,
-                f"s.cool.{wk_wknd}.wb": s_cool_wb,
-            }
+
             
-            
+            # Generate hourly fit plot
             plt.rcParams.update({'font.size': 20})
             fig, ax = plt.subplots(figsize  = (20, 10))
             if wk_wknd == 'wk':
@@ -253,14 +251,38 @@ def hourly_load_fit(load_temp_df):
             load_temp_hr_cool_func = wk_graph[(wk_graph['temp_c'] < t_bph) & (wk_graph['temp_c'] > t_bpc)].reset_index() 
             
             plt.scatter(wk_graph['temp_c'], wk_graph['load_mw'],color='black')
-            plt.scatter(load_temp_hr_heat['temp_c'], load_temp_hr_heat['temp_c']*s_heat + load_temp_hr_heat['hourly_dark_frac']*s_dark + i_heat,color='red')
-            plt.scatter(load_temp_hr_cool['temp_c'], [max(load_temp_hr_cool['temp_c'][i]*s_cool_db + (load_temp_hr_cool['temp_c_wb'][i] - (db_wb_fit[0]*load_temp_hr_cool['temp_c'][i]**2 + db_wb_fit[1]*load_temp_hr_cool['temp_c'][i] + db_wb_fit[2]))*s_cool_wb + i_cool, 0) + t_bph*s_heat + load_temp_hr_cool['hourly_dark_frac'][i]*s_dark + i_heat for i in range(len(load_temp_hr_cool))], color='blue')
-            plt.scatter(load_temp_hr_cool_func['temp_c'], [max(((load_temp_hr_cool_func['temp_c'][i] - t_bpc) / (t_bph - t_bpc))**2 * (t_bph*s_cool_db + (load_temp_hr_cool_func['temp_c_wb'][i] - (db_wb_fit[0]*load_temp_hr_cool_func['temp_c'][i]**2 + db_wb_fit[1]*load_temp_hr_cool_func['temp_c'][i] + db_wb_fit[2]))*s_cool_wb + i_cool), 0) + load_temp_hr_cool_func['temp_c'][i]*s_heat + load_temp_hr_cool_func['hourly_dark_frac'][i]*s_dark + i_heat for i in range(len(load_temp_hr_cool_func))],color='green')
             
-            plt.title(f'zone {zone_name}, hour {i}, {wk_wknd} \n t_bpc = ' + round(t_bpc, 2) + '  t_bph = ' + round(t_bph, 2))        
+            heat_eqn = load_temp_hr_heat['temp_c']*s_heat + load_temp_hr_heat['hourly_dark_frac']*s_dark + i_heat
+            cool_eqn = [max(load_temp_hr_cool['temp_c'][i]*s_cool_db + (load_temp_hr_cool['temp_c_wb'][i] - (db_wb_fit[0]*load_temp_hr_cool['temp_c'][i]**2 + db_wb_fit[1]*load_temp_hr_cool['temp_c'][i] + db_wb_fit[2]))*s_cool_wb + i_cool, 0) + t_bph*s_heat + load_temp_hr_cool['hourly_dark_frac'][i]*s_dark + i_heat for i in range(len(load_temp_hr_cool))]
+            cool_func_eqn = [max(((load_temp_hr_cool_func['temp_c'][i] - t_bpc) / (t_bph - t_bpc))**2 * (t_bph*s_cool_db + (load_temp_hr_cool_func['temp_c_wb'][i] - (db_wb_fit[0]*load_temp_hr_cool_func['temp_c'][i]**2 + db_wb_fit[1]*load_temp_hr_cool_func['temp_c'][i] + db_wb_fit[2]))*s_cool_wb + i_cool), 0) + load_temp_hr_cool_func['temp_c'][i]*s_heat + load_temp_hr_cool_func['hourly_dark_frac'][i]*s_dark + i_heat for i in range(len(load_temp_hr_cool_func))]
+            
+            plt.scatter(load_temp_hr_heat['temp_c'], heat_eqn, color='red')
+            plt.scatter(load_temp_hr_cool['temp_c'], cool_eqn, color='blue')
+            plt.scatter(load_temp_hr_cool_func['temp_c'], cool_func_eqn, color='green')
+            
+            plt.title(f'zone {zone_name}, hour {i}, {wk_wknd} \n t_bpc = ' + str(round(t_bpc, 2)) + '  t_bph = ' + str(round(t_bph, 2)))        
             plt.xlabel('Temp (°C)')
             plt.ylabel('Load (MW)')
+            plt.savefig(f'dayhour_fits/dayhour_fits_graphs/{zone_name}_hour_{i}_{wk_wknd}_{load_year}.png')  
             
+            mrae_heat = np.mean([np.abs(heat_eqn[i] - load_temp_hr_heat['load_mw'][i]) for i in range(len(load_temp_hr_heat))])
+            mrae_cool = np.mean([np.abs(cool_eqn[i] - load_temp_hr_cool['load_mw'][i]) for i in range(len(load_temp_hr_cool))])
+            mrae_cool_func = np.mean([np.abs(cool_func_eqn[i] - load_temp_hr_cool_func['load_mw'][i]) for i in range(len(load_temp_hr_cool_func))])
+            
+            result[wk_wknd] = {
+                f"t.bpc.{wk_wknd}.c": t_bpc,
+                f"t.bph.{wk_wknd}.c": t_bph,
+                f"i.heat.{wk_wknd}": i_heat,
+                f"s.heat.{wk_wknd}": s_heat,
+                f"s.dark.{wk_wknd}": s_dark,
+                f"i.cool.{wk_wknd}": i_cool,
+                f"s.cool.{wk_wknd}.db": s_cool_db,
+                f"s.cool.{wk_wknd}.wb": s_cool_wb,
+                f"mrae.heat.{wk_wknd}.mw": mrae_heat,
+                f"mrae.cool.{wk_wknd}.mw": mrae_cool,
+                f"mrae.mid.{wk_wknd}.mw": mrae_cool_func,
+
+            }
             
         return pd.Series({**result["wk"], **result["wknd"]})
 
@@ -348,25 +370,33 @@ def plot_profile(profile, actual):
 
     :return: (*plot*)
     """
+    
+    mrae = [np.abs(profile[i] - actual[i])/actual[i] for i in range(len(profile))]
+    
+    rss = np.sqrt(np.mean([(actual[i] - profile[i])**2 for i in range(len(profile))]))/np.mean(actual)
 
-    mrae = np.mean(
-        [np.abs(profile[i] - actual[i]) / actual[i] for i in range(len(profile))]
-    )
+    mrae_avg, mrae_max = np.mean(mrae), max(mrae)
+
 
     fig, ax = plt.subplots(figsize=(20, 10))
-    plt.plot(list(profile.index), (profile - actual)/actual)
-    #plt.plot(list(actual.index), actual)
-    plt.legend(["Profile - Actual %"])#, "Actual"])
+    plt.plot(list(profile.index), profile - actual)
+    plt.legend(["Profile - Actual"])
     plt.xlabel("Hour")
-    plt.ylabel("MW")
+    plt.ylabel("MW Difference")
     plt.title(
         "Zone "
         + zone_name
         + " Load Comparison \n"
-        + "mrae = "
-        + str(round(mrae * 100, 2))
-        + "%"
+        + "avg mrae = "
+        + str(round(mrae_avg * 100, 2))
+        + "% \n avg profile load = "
+        + str(round(np.mean(profile), 2))
+        + " MW"
     )
+    plt.savefig(f'Profiles/Profiles_graphs/{zone_name}_profile_{year}.png') 
+    
+    return mrae_avg, mrae_max, rss, np.mean(profile), np.mean(actual), max(profile), max(actual)
+
 
 
 def main(zone_name, zone_name_shp, load_year, year):
@@ -389,16 +419,17 @@ def main(zone_name, zone_name_shp, load_year, year):
 
     puma_data_zone = zone_shp_overlay(zone_name_shp)
 
-    temp_df_load_year = zonal_data(puma_data_zone, hours_utc_load_year)
+    temp_df_load_year, stats_load_year = zonal_data(puma_data_zone, hours_utc_load_year)
             
     temp_df_load_year["load_mw"] = zone_load
 
     hourly_fits_df, db_wb_fit = hourly_load_fit(temp_df_load_year)
-    hourly_fits_df.to_csv(f"dayhour_fits/{zone_name}_dayhour_fits_{year}.csv")
+    hourly_fits_df.to_csv(f"dayhour_fits/{zone_name}_dayhour_fits_{load_year}.csv")
+
 
     zone_profile_load_MWh = pd.DataFrame({"hour_utc": list(range(len(hours_utc)))})
     
-    temp_df = zonal_data(puma_data_zone, hours_utc)
+    temp_df, stats = zonal_data(puma_data_zone, hours_utc)
 
     energy_list = zone_profile_load_MWh.hour_utc.apply(
         lambda x: temp_to_energy(temp_df.loc[x], hourly_fits_df, db_wb_fit)
@@ -417,13 +448,15 @@ def main(zone_name, zone_name_shp, load_year, year):
     zone_profile_load_MWh = zone_profile_load_MWh.set_index("hour_utc")
     zone_profile_load_MWh.to_csv(f"Profiles/{zone_name}_profile_load_mw_{year}.csv")
 
-    plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load)
+    stats["mrae_avg_%"], stats["mrae_max_%"], stats["rss_avg_%"], stats["avg_profile_load_mw"], stats["avg_actual_load_mw"], stats["max_profile_load_mw"], stats["max_actual_load_mw"] = plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load)
+    
+    stats.to_csv(f"Profiles/Profiles_stats/{zone_name}_stats_{year}.csv")
 
 
 if __name__ == "__main__":
     # Constants to be used when running this file as a script
     year = 2019
     load_year = 2019
-    zone_name = "LDWP"
-    zone_name_shp = "LADWP"
+    zone_name = "NYIS-ZOND"
+    zone_name_shp = "North"
     main(zone_name, zone_name_shp, load_year, year)
