@@ -98,7 +98,7 @@ def generate_profiles(yr_temps=2016, bldg_class="res", hp_model="advperfhp"):
         puma_data_it = const.puma_data.query("state == @state")
 
         temps_pumas_it = pd.read_csv(
-            f"https://besciences.blob.core.windows.net/datasets/pumas/temps_pumas_{state}_{yr_temps}.csv"
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps_pumas_{state}_{yr_temps}.csv"
         )
 
         hours = pd.date_range(
