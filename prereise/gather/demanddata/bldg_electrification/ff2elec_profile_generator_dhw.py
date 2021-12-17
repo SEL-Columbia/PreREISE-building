@@ -81,7 +81,7 @@ def generate_profiles(yr_temps=2016, bldg_class="res", hp_model="advperfhp"):
         )
 
     # parse user data
-    temp_ref_it = const.temp_ref_com if bldg_class == "com" else const.temp_ref_res
+    temp_ref_it = const.temp_ref["bldg_class"]
     dhw_mult = const.dhw_com_mult if bldg_class == "com" else const.dhw_res_mult
 
     dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -98,7 +98,7 @@ def generate_profiles(yr_temps=2016, bldg_class="res", hp_model="advperfhp"):
         puma_data_it = const.puma_data.query("state == @state")
 
         temps_pumas_it = pd.read_csv(
-            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps_pumas_{state}_{yr_temps}.csv"
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps/temps_pumas_{state}_{yr_temps}.csv"
         )
 
         hours = pd.date_range(

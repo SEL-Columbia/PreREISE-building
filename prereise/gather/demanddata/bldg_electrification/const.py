@@ -58,7 +58,7 @@ state_list = [
 classes = ["res", "com"]
 
 # Years with temperature data
-yr_temps_all = list(range(2008, 2018))
+yr_temps_all = list(range(1950, 2021))
 yr_temps_first, yr_temps_last = yr_temps_all[0], yr_temps_all[-1]
 
 # COP and capacity ratio models based on:

@@ -108,7 +108,7 @@ def generate_profiles(yr_temps, bldg_class, hp_model, output_folder="Profiles"):
     os.makedirs(output_folder, exist_ok=True)
 
     # parse user data
-    temp_ref_it = const.temp_ref_com if bldg_class == "com" else const.temp_ref_res
+    temp_ref_it = const.temp_ref[f"{bldg_class}"]
     dir_path = os.path.dirname(os.path.abspath(__file__))
     puma_slopes = pd.read_csv(
         os.path.join(dir_path, "data", f"puma_slopes_ff_{bldg_class}.csv"),
@@ -121,7 +121,7 @@ def generate_profiles(yr_temps, bldg_class, hp_model, output_folder="Profiles"):
         puma_data_it = const.puma_data.query("state == @state")
         puma_slopes_it = puma_slopes.query("state == @state")
         temps_pumas_it = pd.read_csv(
-            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps_pumas_{state}_{yr_temps}.csv"
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps/temps_pumas_{state}_{yr_temps}.csv"
         )
 
         # Compute electric HP loads from fossil fuel conversion

@@ -32,7 +32,7 @@ def calculate_state_slopes(puma_data, year=const.base_year):
     hours_in_month = dti.month.value_counts()
 
     # Load in historical fossil fuel usage data for input/base year
-    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+    #data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
     ng_usage_data = {
         clas: pd.read_csv(
             os.path.join(data_dir, f"ng_monthly_mmbtu_{year}_{clas}.csv"), index_col=0
@@ -66,11 +66,11 @@ def calculate_state_slopes(puma_data, year=const.base_year):
 
     for state in const.state_list:
         # Load puma data
-        puma_data_it = const.puma_data.query("state == @state")
+        puma_data_it = puma_data.query("state == @state")
 
         # Load puma temperatures
         temps_pumas = temps_pumas = pd.read_csv(
-            f"https://besciences.blob.core.windows.net/datasets/bldg_el//pumas/temps/temps_pumas_{state}_{year}.csv"
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps/temps_pumas_{state}_{year}.csv"
         )
         temps_pumas_transpose = temps_pumas.T
 
@@ -86,17 +86,17 @@ def calculate_state_slopes(puma_data, year=const.base_year):
             )
             areas_ff_cook_it = (
                 puma_data_it[f"{clas}_area_{year}_m2"]
-                * puma_data_it["frac_ff_cook_com_{year}"]
+                * puma_data_it[f"frac_ff_cook_com_{year}"]
             )
             if clas == "res":
                 areas_ff_other_it = (
                     puma_data_it[f"{clas}_area_{year}_m2"]
-                    * puma_data_it["frac_ff_other_res_{year}"]
+                    * puma_data_it[f"frac_ff_other_res_{year}"]
                 )
             else:
                 areas_ff_other_it = (
                     puma_data_it[f"{clas}_area_{year}_m2"]
-                    * puma_data_it["frac_ff_sh_com_{year}"]
+                    * puma_data_it[f"frac_ff_sh_com_{year}"]
                 )
 
             # sum of previous areas to be used in fitting
@@ -309,7 +309,7 @@ def adjust_puma_slopes(puma_data, state_slopes_res, state_slopes_com, year=const
             puma_data.loc[temp_diff.columns, hd_col_names[clas]] = temp_diff.sum()
 
     # Load in state groups consistent with building area scale adjustments
-    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+    #data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
     area_scale = {
         clas: pd.read_csv(
             os.path.join(data_dir, f"area_scale_{clas}.csv"), index_col=False
