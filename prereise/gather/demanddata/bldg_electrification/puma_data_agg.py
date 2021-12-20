@@ -263,10 +263,12 @@ if __name__ == "__main__":
         puma_lat_long["latitude"],
         puma_lat_long["longitude"],
     )
-    
+
     # Add residential AC penetration
     acpen_b = 0.00117796
     acpen_n = 1.1243
-    puma_data["AC_penetration"] = 1 - np.exp(-acpen_b*puma_data["cdd65_normals_2010"]**acpen_n)
+    puma_data["AC_penetration"] = 1 - np.exp(
+        -acpen_b * puma_data["cdd65_normals_2010"] ** acpen_n
+    )
 
     puma_data.to_csv(os.path.join(data_dir, "puma_data.csv"))
