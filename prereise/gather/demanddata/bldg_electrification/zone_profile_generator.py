@@ -78,59 +78,81 @@ def zonal_data(puma_data, hours_utc):
 
     :return: (*pandas.DataFrame*) temp_df -- hourly zonal values of temperature, wetbulb temperature, and darkness fraction
     """
-    puma_pop_weights = (puma_data["pop_2010"] * puma_data["frac_in_zone"]) / sum(
-        puma_data["pop_2010"] * puma_data["frac_in_zone"]
+    puma_pop_weights = (puma_data["pop"] * puma_data["frac_in_zone"]) / sum(
+        puma_data["pop"] * puma_data["frac_in_zone"]
     )
     zone_states = list(set(puma_data["state"]))
     timezone = max(
         set(list(puma_data["timezone"])), key=list(puma_data["timezone"]).count
     )
 
+    puma_data_year = 2010
+
     stats = pd.Series(
         data=[
-            sum(puma_data["pop_2010"]),
-            sum(puma_data["res_area_2010_m2"]),
-            sum(puma_data["com_area_2010_m2"]),
+            sum(puma_data["pop"]),
+            sum(puma_data[f"res_area_{puma_data_year}_m2"]),
+            sum(puma_data[f"com_area_{puma_data_year}_m2"]),
             sum(puma_data["ind_area_gbs_m2"]),
-            sum(puma_data["res_area_2010_m2"] * puma_data["frac_elec_sh_res_2010"])
-            / sum(puma_data["res_area_2010_m2"]),
-            sum(puma_data["res_area_2010_m2"] * puma_data["AC_penetration"])
-            / sum(puma_data["res_area_2010_m2"]),
-            sum(puma_data["com_area_2010_m2"] * puma_data["frac_elec_sh_com_2010"])
-            / sum(puma_data["com_area_2010_m2"]),
-            sum(puma_data["res_area_2010_m2"] * puma_data["frac_elec_dhw_res_2010"])
-            / sum(puma_data["res_area_2010_m2"]),
-            sum(puma_data["com_area_2010_m2"] * puma_data["frac_elec_dhw_com_2010"])
-            / sum(puma_data["com_area_2010_m2"]),
-            sum(puma_data["res_area_2010_m2"] * puma_data["frac_elec_other_res_2010"])
-            / sum(puma_data["res_area_2010_m2"]),
-            sum(puma_data["com_area_2010_m2"] * puma_data["frac_elec_cook_com_2010"])
-            / sum(puma_data["com_area_2010_m2"]),
             sum(
-                puma_data["hdd65_normals_2010"]
-                * puma_data["pop_2010"]
-                / sum(puma_data["pop_2010"])
+                puma_data[f"res_area_{puma_data_year}_m2"]
+                * puma_data[f"frac_elec_sh_res_{puma_data_year}"]
+            )
+            / sum(puma_data[f"res_area_{puma_data_year}_m2"]),
+            sum(
+                puma_data[f"res_area_{puma_data_year}_m2"] * puma_data["AC_penetration"]
+            )
+            / sum(puma_data[f"res_area_{puma_data_year}_m2"]),
+            sum(
+                puma_data[f"com_area_{puma_data_year}_m2"]
+                * puma_data[f"frac_elec_sh_com_{puma_data_year}"]
+            )
+            / sum(puma_data[f"com_area_{puma_data_year}_m2"]),
+            sum(
+                puma_data[f"res_area_{puma_data_year}_m2"]
+                * puma_data[f"frac_elec_dhw_res_{puma_data_year}"]
+            )
+            / sum(puma_data[f"res_area_{puma_data_year}_m2"]),
+            sum(
+                puma_data[f"com_area_{puma_data_year}_m2"]
+                * puma_data[f"frac_elec_dhw_com_{puma_data_year}"]
+            )
+            / sum(puma_data[f"com_area_{puma_data_year}_m2"]),
+            sum(
+                puma_data[f"res_area_{puma_data_year}_m2"]
+                * puma_data[f"frac_elec_other_res_{puma_data_year}"]
+            )
+            / sum(puma_data[f"res_area_{puma_data_year}_m2"]),
+            sum(
+                puma_data[f"com_area_{puma_data_year}_m2"]
+                * puma_data[f"frac_elec_cook_com_{puma_data_year}"]
+            )
+            / sum(puma_data[f"com_area_{puma_data_year}_m2"]),
+            sum(
+                puma_data[f"hdd65_normals_{puma_data_year}"]
+                * puma_data["pop"]
+                / sum(puma_data["pop"])
             ),
             sum(
-                puma_data["cdd65_normals_2010"]
-                * puma_data["pop_2010"]
-                / sum(puma_data["pop_2010"])
+                puma_data[f"cdd65_normals_{puma_data_year}"]
+                * puma_data["pop"]
+                / sum(puma_data["pop"])
             ),
         ],
         index=[
-            "pop_2010",
-            "res_area_m2_2010",
-            "com_area_m2_2010",
-            "ind_area_m2_gbs_2010",
-            "frac_elec_res_heat_2010",
-            "frac_elec_res_cool_2010",
-            "frac_elec_com_heat_2010",
-            "frac_elec_dhw_res_2010",
-            "frac_elec_dhw_com_2010",
-            "frac_elec_other_res_2010",
-            "frac_elec_cook_com_2010",
-            "hdd65_2010",
-            "cdd65_2010",
+            "pop",
+            "res_area_m2",
+            "com_area_m2",
+            "ind_area_m2_gbs",
+            "frac_elec_res_heat",
+            "frac_elec_res_cool",
+            "frac_elec_com_heat",
+            "frac_elec_dhw_res",
+            "frac_elec_dhw_com",
+            "frac_elec_other_res",
+            "frac_elec_cook_com",
+            "hdd65",
+            "cdd65",
         ],
     )
 
