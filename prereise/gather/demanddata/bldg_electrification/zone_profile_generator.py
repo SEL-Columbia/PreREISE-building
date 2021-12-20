@@ -616,17 +616,69 @@ if __name__ == "__main__":
     # Constants to be used when running this file as a script
     year = 2019
     load_year = 2019
-    
-    zone_names = ["NYIS-ZONA", "NYIS-ZONB", "NYIS-ZONC", "NYIS-ZOND", "NYIS-ZONE", "NYIS-ZONF", "NYIS-ZONG", "NYIS-ZONH", "NYIS-ZONI", "NYIS-ZONJ", "NYIS-ZONK",
-                  "ERCO-C", "ERCO-E", "ERCO-FW", "ERCO-N", "ERCO-NC", "ERCO-S", "ERCO-SC", "ERCO-W",
-                  "CISO-PGAE", "CISO-SCE", "CISO-SDGE", "CISO-VEA", "IID", "WALC", "LDWP", "TIDC", "BANC"]
-    
-    zone_name_shps = ["West", "Genesee", "Central", "North", "Mohawk Valley", "Capital", "Hudson Valley", "Millwood", "Dunwoodie", "N.Y.C.", "Long Island",
-                      "ERCO-C", "ERCO-E", "ERCO-FW", "ERCO-N", "ERCO-NC", "ERCO-S", "ERCO-SC", "ERCO-W",
-                      "CISO-PGAE", "CISO-SCE", "CISO-SDGE", "CISO-VEA", "IID", "WALC", "LADWP", "TID", "BANC"]
-    
+
+    zone_names = [
+        "NYIS-ZONA",
+        "NYIS-ZONB",
+        "NYIS-ZONC",
+        "NYIS-ZOND",
+        "NYIS-ZONE",
+        "NYIS-ZONF",
+        "NYIS-ZONG",
+        "NYIS-ZONH",
+        "NYIS-ZONI",
+        "NYIS-ZONJ",
+        "NYIS-ZONK",
+        "ERCO-C",
+        "ERCO-E",
+        "ERCO-FW",
+        "ERCO-N",
+        "ERCO-NC",
+        "ERCO-S",
+        "ERCO-SC",
+        "ERCO-W",
+        "CISO-PGAE",
+        "CISO-SCE",
+        "CISO-SDGE",
+        "CISO-VEA",
+        "IID",
+        "WALC",
+        "LDWP",
+        "TIDC",
+        "BANC",
+    ]
+
+    zone_name_shps = [
+        "West",
+        "Genesee",
+        "Central",
+        "North",
+        "Mohawk Valley",
+        "Capital",
+        "Hudson Valley",
+        "Millwood",
+        "Dunwoodie",
+        "N.Y.C.",
+        "Long Island",
+        "ERCO-C",
+        "ERCO-E",
+        "ERCO-FW",
+        "ERCO-N",
+        "ERCO-NC",
+        "ERCO-S",
+        "ERCO-SC",
+        "ERCO-W",
+        "CISO-PGAE",
+        "CISO-SCE",
+        "CISO-SDGE",
+        "CISO-VEA",
+        "IID",
+        "WALC",
+        "LADWP",
+        "TID",
+        "BANC",
+    ]
+
     for i in range(len(zone_names)):
         zone_name, zone_name_shp = zone_names[i], zone_name_shps[i]
         main(zone_name, zone_name_shp, load_year, year)
-
-
