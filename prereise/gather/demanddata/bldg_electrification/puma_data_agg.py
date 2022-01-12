@@ -33,9 +33,7 @@ def aggregate_puma_df(
     # Group tracts by PUMA for aggregration
     grouped_tracts = tract_data.groupby(tract_puma_mapping["puma"])
     # Sum population and GBS areas; store in data frame
-    puma_df.loc[grouped_tracts.groups.keys(), "pop"] = grouped_tracts[
-        "pop"
-    ].sum()
+    puma_df.loc[grouped_tracts.groups.keys(), "pop"] = grouped_tracts["pop"].sum()
     puma_df.loc[grouped_tracts.groups.keys(), "res_area_gbs_m2"] = grouped_tracts[
         "res_area_gbs_m2"
     ].sum()
@@ -46,19 +44,13 @@ def aggregate_puma_df(
         "ind_area_gbs_m2"
     ].sum()
     # Population-weighted average hdd, cdd, and acpen
-    tract_data["pop_hdd65_normals"] = (
-        tract_data["pop"] * tract_data["hdd65_normals"]
-    )
-    tract_data["pop_cdd65_normals"] = (
-        tract_data["pop"] * tract_data["cdd65_normals"]
-    )
+    tract_data["pop_hdd65_normals"] = tract_data["pop"] * tract_data["hdd65_normals"]
+    tract_data["pop_cdd65_normals"] = tract_data["pop"] * tract_data["cdd65_normals"]
     puma_df.loc[grouped_tracts.groups.keys(), "hdd65_normals"] = (
-        grouped_tracts["pop_hdd65_normals"].sum()
-        / grouped_tracts["pop"].sum()
+        grouped_tracts["pop_hdd65_normals"].sum() / grouped_tracts["pop"].sum()
     )
     puma_df.loc[grouped_tracts.groups.keys(), "cdd65_normals"] = (
-        grouped_tracts["pop_cdd65_normals"].sum()
-        / grouped_tracts["pop"].sum()
+        grouped_tracts["pop_cdd65_normals"].sum() / grouped_tracts["pop"].sum()
     )
 
     # Load RECS and CBECS area scales for res and com
@@ -78,7 +70,7 @@ def aggregate_puma_df(
         * const.conv_ft2_to_bsf
         for s in comscales.fillna(0).values.tolist()
     ]
-    
+
     # Compute scalar for GBS area to base year area correspondingg to RECS/CBECS
     # and assuming a constant annual growth rate
     resscales["area_scalar"] = resscales[f"RECS{const.recs_date_1}"]
@@ -89,17 +81,19 @@ def aggregate_puma_df(
             / (const.recs_date_2 - const.recs_date_1)
         )
     ) / resscales["GBS"]
-    
+
     comscales["area_scalar"] = comscales[f"CBECS{const.cbecs_date_1}"]
     * (
-        (comscales[f"CBECS{const.cbecs_date_2}"] / comscales[f"CBECS{const.cbecs_date_1}"])
+        (
+            comscales[f"CBECS{const.cbecs_date_2}"]
+            / comscales[f"CBECS{const.cbecs_date_1}"]
+        )
         ** (
             (const.base_year - const.cbecs_date_1)
             / (const.cbecs_date_2 - const.cbecs_date_1)
         )
     ) / comscales["GBS"]
-            
-        
+
     # Scale puma area from gbs to base year
     for state in const.state_list:
         state_row_scale_res = resscales[resscales.eq(state).any(1)].reset_index()
@@ -131,7 +125,6 @@ def scale_fuel_fractions(hh_fuels, puma_df, year=const.base_year):
     for f in ["fok", "othergas", "coal", "wood", "solar", "elec", "other", "none"]:
         puma_df[f"frac_sh_res_{f}_acs"] = hh_fuels[f"hh_{f}"] / hh_fuels["hh_total"]
 
-
     region_map = {state: r for r, states in const.regions.items() for state in states}
     puma_region_groups = puma_df.groupby(puma_df["state"].map(region_map))
     for c in const.classes:
@@ -140,7 +133,10 @@ def scale_fuel_fractions(hh_fuels, puma_df, year=const.base_year):
             lambda x: pd.Series(
                 {
                     f: (
-                        (x[f"frac_sh_res_{f}_acs"] * x[f"{c}_area_{const.base_year}_m2"]).sum()
+                        (
+                            x[f"frac_sh_res_{f}_acs"]
+                            * x[f"{c}_area_{const.base_year}_m2"]
+                        ).sum()
                         / x[f"{c}_area_{const.base_year}_m2"].sum()
                     )
                     for f in const.fuel
@@ -158,7 +154,9 @@ def scale_fuel_fractions(hh_fuels, puma_df, year=const.base_year):
             up_scale = (area_fraction_targets - area_fractions) / (1 - area_fractions)
             for r in const.regions:
                 for f in const.fuel:
-                    pre_scaling = puma_region_groups.get_group(r)[f"frac_sh_res_{f}_acs"]
+                    pre_scaling = puma_region_groups.get_group(r)[
+                        f"frac_sh_res_{f}_acs"
+                    ]
                     if down_scale.loc[r, f] <= 1:
                         scaled = pre_scaling * down_scale.loc[r, f]
                     else:
@@ -203,9 +201,7 @@ if __name__ == "__main__":
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
     # Load ACS fuel data
-    puma_fuel = pd.read_csv(
-        os.path.join(data_dir, "puma_fuel.csv"), index_col="puma"
-    )
+    puma_fuel = pd.read_csv(os.path.join(data_dir, "puma_fuel.csv"), index_col="puma")
 
     # Load tract_puma_mapping
     tract_puma_mapping = pd.read_csv(
