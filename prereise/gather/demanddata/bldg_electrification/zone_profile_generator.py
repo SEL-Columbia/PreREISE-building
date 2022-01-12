@@ -1,10 +1,10 @@
+import geopandas as gpd
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import geopandas as gpd
 from pandas.tseries.holiday import USFederalHolidayCalendar as calendar
 from scipy.stats import linregress
 from sklearn.linear_model import LinearRegression
-import matplotlib.pyplot as plt
 
 
 def bkpt_scale(df, num_points, bkpt, heat_cool):

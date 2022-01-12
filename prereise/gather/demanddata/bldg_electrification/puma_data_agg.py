@@ -2,8 +2,8 @@
 import os
 
 import geopandas as gpd
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from prereise.gather.demanddata.bldg_electrification import const
 

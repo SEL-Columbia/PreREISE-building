@@ -9,11 +9,11 @@ import os
 import cdsapi
 import numpy as np
 import pandas as pd
+import psychrolib
 import xarray as xr
+from dateutil import tz
 from scipy.spatial import cKDTree
 from suntime import Sun
-from dateutil import tz
-import psychrolib
 
 psychrolib.SetUnitSystem(psychrolib.SI)
 
