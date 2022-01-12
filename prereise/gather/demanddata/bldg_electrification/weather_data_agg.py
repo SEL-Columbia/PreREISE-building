@@ -15,10 +15,9 @@ from dateutil import tz
 from scipy.spatial import cKDTree
 from suntime import Sun
 
-psychrolib.SetUnitSystem(psychrolib.SI)
-
-
 from prereise.gather.demanddata.bldg_electrification import const
+
+psychrolib.SetUnitSystem(psychrolib.SI)
 
 variable_names = {
     "temp": {"era5": "2m_temperature", "nc": "t2m"},
