@@ -14,6 +14,7 @@ from scipy.spatial import cKDTree
 from suntime import Sun
 from dateutil import tz
 import psychrolib
+
 psychrolib.SetUnitSystem(psychrolib.SI)
 
 
@@ -221,7 +222,6 @@ def create_era5_pumas(
             )
 
 
-
 def dark_fractions(puma, puma_data, year):
     """Compute annual time series of fraction of each hour that is dark for a given puma
 
@@ -231,28 +231,34 @@ def dark_fractions(puma, puma_data, year):
 
     :return: (*list*) -- hourly dark fractions for the year
     """
-    
-    latitude = puma_data.loc[puma,"latitude"]
-    longitude = puma_data.loc[puma,"longitude"]
-    
-    puma_timezone = puma_data.loc[puma,"timezone"]
-    hours_local = pd.date_range(start=f"{year}-01-01", end=f"{year+1}-01-01", freq="H", tz="UTC")[:-1].tz_convert(puma_timezone)
-    
+
+    latitude = puma_data.loc[puma, "latitude"]
+    longitude = puma_data.loc[puma, "longitude"]
+
+    puma_timezone = puma_data.loc[puma, "timezone"]
+    hours_local = pd.date_range(
+        start=f"{year}-01-01", end=f"{year+1}-01-01", freq="H", tz="UTC"
+    )[:-1].tz_convert(puma_timezone)
+
     sun = Sun(latitude, longitude)
-    
-    sunrise = pd.Series(hours_local).apply(lambda x: sun.get_local_sunrise_time(x, local_time_zone=tz.gettz(puma_timezone)))
-    sunset = pd.Series(hours_local).apply(lambda x: sun.get_local_sunset_time(x, local_time_zone=tz.gettz(puma_timezone)))
-        
-    sun_df = pd.DataFrame({"sunrise": sunrise, 
-                           "sunset": sunset, 
-                           "hour_local": hours_local.hour})
-    
+
+    sunrise = pd.Series(hours_local).apply(
+        lambda x: sun.get_local_sunrise_time(x, local_time_zone=tz.gettz(puma_timezone))
+    )
+    sunset = pd.Series(hours_local).apply(
+        lambda x: sun.get_local_sunset_time(x, local_time_zone=tz.gettz(puma_timezone))
+    )
+
+    sun_df = pd.DataFrame(
+        {"sunrise": sunrise, "sunset": sunset, "hour_local": hours_local.hour}
+    )
+
     sun_df["sunrise_hour"] = sun_df["sunrise"].apply(lambda x: x.hour)
     sun_df["sunset_hour"] = sun_df["sunset"].apply(lambda x: x.hour)
-    
-    sun_df["sunrise_dark_frac"] = sun_df["sunrise"].apply(lambda x: x.minute/60)
-    sun_df["sunset_dark_frac"] = sun_df["sunset"].apply(lambda x: 1 - x.minute/60)
-    
+
+    sun_df["sunrise_dark_frac"] = sun_df["sunrise"].apply(lambda x: x.minute / 60)
+    sun_df["sunset_dark_frac"] = sun_df["sunset"].apply(lambda x: 1 - x.minute / 60)
+
     def dark_hour(local, sunrise, sunset, sunrise_frac, sunset_frac):
         """Return fraction of hour that is dark. 0 if completely light, 1 if completely dark
 
@@ -272,9 +278,18 @@ def dark_fractions(puma, puma_data, year):
             return 0
         else:
             return 1
-    
-    sun_df["dark_hour_frac"] = sun_df.apply(lambda x: dark_hour(x["hour_local"], x["sunrise_hour"], x["sunset_hour"], x["sunrise_dark_frac"], x["sunset_dark_frac"]), axis=1)
-    
+
+    sun_df["dark_hour_frac"] = sun_df.apply(
+        lambda x: dark_hour(
+            x["hour_local"],
+            x["sunrise_hour"],
+            x["sunset_hour"],
+            x["sunrise_dark_frac"],
+            x["sunset_dark_frac"],
+        ),
+        axis=1,
+    )
+
     return sun_df["dark_hour_frac"]
 
 
@@ -286,19 +301,22 @@ def generate_dark_fracs(year, state_list):
 
     :export: (*csv*) -- statewide hourly dark fractions for every puma
     """
-    
+
     puma_data = pd.read_csv("data/puma_data.csv", index_col="puma")
-    
-    for state in state_list: 
+
+    for state in state_list:
         puma_data_it = puma_data[puma_data["state"] == state]
         puma_dark_frac = pd.DataFrame(columns=list(puma_data_it.index))
-        
+
         for i in list(puma_dark_frac.columns):
             puma_dark_frac[i] = dark_fractions(i, puma_data, year)
-    
-        puma_dark_frac.to_csv(f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/dark_frac/dark_frac_pumas_{state}_{year}.csv",index=False)
 
- 
+        puma_dark_frac.to_csv(
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/dark_frac/dark_frac_pumas_{state}_{year}.csv",
+            index=False,
+        )
+
+
 def t_to_twb(temp_values, dwpt_values, press_values):
     """Compute wetbulb temperature from drybulb, dewpoint, and pressure
 
@@ -308,8 +326,14 @@ def t_to_twb(temp_values, dwpt_values, press_values):
 
     :return: (*list*) -- wetbulb temperatures
     """
-    return [psychrolib.GetTWetBulbFromTDewPoint(temp_values[i], min(temp_values[i],dwpt_values[i]), press_values[i]) for i in range(len(dwpt_values))] 
- 
+    return [
+        psychrolib.GetTWetBulbFromTDewPoint(
+            temp_values[i], min(temp_values[i], dwpt_values[i]), press_values[i]
+        )
+        for i in range(len(dwpt_values))
+    ]
+
+
 def generate_wetbulb_temps(year, state_list):
     """Generate puma level hourly time series of wetbulb temperatures for all pumas within a state
 
@@ -318,21 +342,74 @@ def generate_wetbulb_temps(year, state_list):
 
     :export: (*csv*) -- statewide hourly wetbulb temperatures for every puma
     """
-    
+
     for state in state_list:
-        temps = pd.read_csv(f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps/temps_pumas_{state}_{year}.csv")
-        dwpts = pd.read_csv(f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/dewpoints/dewpts_pumas_{state}_{year}.csv")
-        press = pd.read_csv(f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/press/press_pumas_{state}_{year}.csv")
-    
+        temps = pd.read_csv(
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps/temps_pumas_{state}_{year}.csv"
+        )
+        dwpts = pd.read_csv(
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/dewpoints/dewpts_pumas_{state}_{year}.csv"
+        )
+        press = pd.read_csv(
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/press/press_pumas_{state}_{year}.csv"
+        )
+
         temps_wetbulb = temps.apply(lambda x: t_to_twb(x, dwpts[x.name], press[x.name]))
-        
-        temps_wetbulb.to_csv(f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps_wetbulb/temps_wetbulb_pumas_{state}_{year}.csv",index=False)
-    
+
+        temps_wetbulb.to_csv(
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps_wetbulb/temps_wetbulb_pumas_{state}_{year}.csv",
+            index=False,
+        )
 
 
-state_list = ["AL","AZ","AR","CA","CO","CT","DE","DC","FL","GA","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"]
-
-
-
-
-
+state_list = [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY",
+]
