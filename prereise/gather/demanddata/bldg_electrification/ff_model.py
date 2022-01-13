@@ -303,7 +303,7 @@ def adjust_puma_slopes(
     for state in const.state_list:
         # Load puma temperatures
         temps_pumas = pd.read_csv(
-            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps_pumas_{state}_{year}.csv"
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps/temps_pumas_{state}_{year}.csv"
         )
         # Hourly temperature difference below const.temp_ref_res/com for each puma
         for clas in classes:
