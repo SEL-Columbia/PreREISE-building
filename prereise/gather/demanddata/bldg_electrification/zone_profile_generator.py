@@ -1,10 +1,24 @@
+import os
+
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from pandas.tseries.holiday import USFederalHolidayCalendar as calendar  # noqa: N813
+from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar  # noqa: N813
 from scipy.stats import linregress
 from sklearn.linear_model import LinearRegression
+
+
+def create_directory(dir):
+    """
+    Create a directory if not exist
+
+    :param str dir:
+    :return: dir
+    """
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
+    return dir
 
 
 def bkpt_scale(df, num_points, bkpt, heat_cool):
@@ -70,27 +84,26 @@ def zone_shp_overlay(zone_name_shp):
     return puma_data_zone
 
 
-def zonal_data(puma_data, hours_utc):
+def zonal_data(puma_data, hours_utc, puma_data_year=2010):
     """Aggregate puma metrics to population weighted hourly zonal values
 
     :param pandas.DataFrame puma_data: puma data within zone, output of zone_shp_overlay()
     :param pandas.DatetimeIndex hours_utc: index of UTC hours.
+    :param int puma_data_year: puma data year
 
     :return: (*pandas.DataFrame*) temp_df -- hourly zonal values of temperature, wetbulb temperature, and darkness fraction
     """
-    puma_pop_weights = (puma_data["pop"] * puma_data["frac_in_zone"]) / sum(
-        puma_data["pop"] * puma_data["frac_in_zone"]
-    )
+    puma_pop_weights = (
+        puma_data[f"pop_{puma_data_year}"] * puma_data["frac_in_zone"]
+    ) / sum(puma_data[f"pop_{puma_data_year}"] * puma_data["frac_in_zone"])
     zone_states = list(set(puma_data["state"]))
     timezone = max(
         set(list(puma_data["timezone"])), key=list(puma_data["timezone"]).count
     )
 
-    puma_data_year = 2010
-
     stats = pd.Series(
         data=[
-            sum(puma_data["pop"]),
+            sum(puma_data[f"pop_{puma_data_year}"]),
             sum(puma_data[f"res_area_{puma_data_year}_m2"]),
             sum(puma_data[f"com_area_{puma_data_year}_m2"]),
             sum(puma_data["ind_area_gbs_m2"]),
@@ -130,13 +143,13 @@ def zonal_data(puma_data, hours_utc):
             / sum(puma_data[f"com_area_{puma_data_year}_m2"]),
             sum(
                 puma_data[f"hdd65_normals_{puma_data_year}"]
-                * puma_data["pop"]
-                / sum(puma_data["pop"])
+                * puma_data[f"pop_{puma_data_year}"]
+                / sum(puma_data[f"pop_{puma_data_year}"])
             ),
             sum(
                 puma_data[f"cdd65_normals_{puma_data_year}"]
-                * puma_data["pop"]
-                / sum(puma_data["pop"])
+                * puma_data[f"pop_{puma_data_year}"]
+                / sum(puma_data[f"pop_{puma_data_year}"])
             ),
         ],
         index=[
@@ -188,7 +201,7 @@ def zonal_data(puma_data, hours_utc):
     is_holiday = pd.Series(hours_local).dt.date.isin(
         list(
             pd.Series(
-                calendar().holidays(start=hours_local.min(), end=hours_local.max())
+                Calendar().holidays(start=hours_local.min(), end=hours_local.max())
             ).dt.date
         )
     )
@@ -218,10 +231,11 @@ def zonal_data(puma_data, hours_utc):
     return temp_df, stats
 
 
-def hourly_load_fit(load_temp_df):
+def hourly_load_fit(load_temp_df, close_fig=True):
     """Fit hourly heating, cooling, and baseload functions to load data
 
     :param pandas.DataFrame load_temp_df: hourly load and temperature data
+    :param bool close_fig: close the current figure to prevent too many open figures
 
     :return: (*pandas.DataFrame*) hourly_fits_df -- hourly and week/weekend breakpoints and coefficients for electricity use equations
     :return: (*float*) s_wb_db, i_wb_db -- slope and intercept of fit between dry and wet bulb temperatures of zone
@@ -407,10 +421,13 @@ def hourly_load_fit(load_temp_df):
             )
             plt.xlabel("Temp (°C)")
             plt.ylabel("Load (MW)")
-            plt.savefig(
-                f"dayhour_fits/dayhour_fits_graphs/{zone_name}_hour_{i}_{wk_wknd}_{load_year}.png"
-            )
+            results_dir = "dayhour_fits/dayhour_fits_graphs"
 
+            plt.savefig(
+                f"{create_directory(results_dir)}/{zone_name}_hour_{i}_{wk_wknd}_{load_year}.png"
+            )
+            if close_fig:
+                plt.close()
             mrae_heat = np.mean(
                 [
                     np.abs(heat_eqn[i] - load_temp_hr_heat["load_mw"][i])
@@ -560,7 +577,8 @@ def plot_profile(profile, actual):
         + str(round(np.mean(profile), 2))
         + " MW"
     )
-    plt.savefig(f"Profiles/Profiles_graphs/{zone_name}_profile_{year}.png")
+    results_dir = "Profiles/Profiles_graphs"
+    plt.savefig(f"{create_directory(results_dir)}/{zone_name}_profile_{year}.png")
 
     return (
         mrae_avg,
@@ -598,30 +616,31 @@ def main(zone_name, zone_name_shp, load_year, year):
     temp_df_load_year["load_mw"] = zone_load
 
     hourly_fits_df, db_wb_fit = hourly_load_fit(temp_df_load_year)
-    hourly_fits_df.to_csv(f"dayhour_fits/{zone_name}_dayhour_fits_{load_year}.csv")
-
-    zone_profile_load_MWh = pd.DataFrame(  # noqa: N806
-        {"hour_utc": list(range(len(hours_utc)))}
+    dir = "dayhour_fits"
+    hourly_fits_df.to_csv(
+        f"{create_directory(dir)}/{zone_name}_dayhour_fits_{load_year}.csv"
     )
+
+    zone_profile_load_mwh = pd.DataFrame({"hour_utc": list(range(len(hours_utc)))})
 
     temp_df, stats = zonal_data(puma_data_zone, hours_utc)
 
-    energy_list = zone_profile_load_MWh.hour_utc.apply(
+    energy_list = zone_profile_load_mwh.hour_utc.apply(
         lambda x: temp_to_energy(temp_df.loc[x], hourly_fits_df, db_wb_fit)
     )
     (
-        zone_profile_load_MWh["base_load_mw"],
-        zone_profile_load_MWh["heat_load_mw"],
-        zone_profile_load_MWh["cool_load_mw"],
-        zone_profile_load_MWh["total_load_mw"],
+        zone_profile_load_mwh["base_load_mw"],
+        zone_profile_load_mwh["heat_load_mw"],
+        zone_profile_load_mwh["cool_load_mw"],
+        zone_profile_load_mwh["total_load_mw"],
     ) = (
         energy_list.apply(lambda x: x[0]),
         energy_list.apply(lambda x: x[1]),
         energy_list.apply(lambda x: x[2]),
         energy_list.apply(lambda x: sum(x)),
     )
-    zone_profile_load_MWh.set_index("hour_utc", inplace=True)
-    zone_profile_load_MWh.to_csv(f"Profiles/{zone_name}_profile_load_mw_{year}.csv")
+    zone_profile_load_mwh = zone_profile_load_mwh.set_index("hour_utc")
+    zone_profile_load_mwh.to_csv(f"Profiles/{zone_name}_profile_load_mw_{year}.csv")
 
     (
         stats["mrae_avg_%"],
@@ -631,9 +650,9 @@ def main(zone_name, zone_name_shp, load_year, year):
         stats["avg_actual_load_mw"],
         stats["max_profile_load_mw"],
         stats["max_actual_load_mw"],
-    ) = plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load)
-
-    stats.to_csv(f"Profiles/Profiles_stats/{zone_name}_stats_{year}.csv")
+    ) = plot_profile(zone_profile_load_mwh["total_load_mw"], zone_load)
+    dir = "Profiles/Profiles_stats"
+    stats.to_csv(f"{create_directory(dir)}/{zone_name}_stats_{year}.csv")
 
 
 if __name__ == "__main__":
