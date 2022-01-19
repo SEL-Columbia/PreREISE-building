@@ -169,9 +169,6 @@ def scale_fuel_fractions(hh_fuels, puma_df, year=const.base_year):
     puma_df[f"frac_other_sh_com_{year}"] = 1 - puma_df[named_sh_com_cols].sum(axis=1)
 
     # Copy residential space heating columns to match new column naming convention
-    # puma_df = puma_df.assign(
-    #     **{f"frac_{f}_sh_res_{year}": puma_df[f"frac_sh_res_{f}_{year}"] for f in const.fuel}
-    # )
     fossil_fuels = {"natgas", "othergas", "fok"}
     for c in const.classes:
         uselist = ["sh", "dhw", "other"] if c == "res" else ["sh", "dhw", "cook"]
