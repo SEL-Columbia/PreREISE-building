@@ -81,7 +81,7 @@ def generate_profiles(yr_temps=2016, bldg_class="res", hp_model="advperfhp"):
         )
 
     # parse user data
-    temp_ref_it = const.temp_ref["bldg_class"]
+    temp_ref_it = const.temp_ref[bldg_class]
     dhw_mult = const.dhw_com_mult if bldg_class == "com" else const.dhw_res_mult
 
     dir_path = os.path.dirname(os.path.abspath(__file__))

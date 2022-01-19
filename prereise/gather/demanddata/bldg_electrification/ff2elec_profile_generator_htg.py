@@ -108,7 +108,7 @@ def generate_profiles(yr_temps, bldg_class, hp_model, output_folder="Profiles"):
     os.makedirs(output_folder, exist_ok=True)
 
     # parse user data
-    temp_ref_it = const.temp_ref[f"{bldg_class}"]
+    temp_ref_it = const.temp_ref[bldg_class]
     dir_path = os.path.dirname(os.path.abspath(__file__))
     puma_slopes = pd.read_csv(
         os.path.join(dir_path, "data", f"puma_slopes_ff_{bldg_class}.csv"),
