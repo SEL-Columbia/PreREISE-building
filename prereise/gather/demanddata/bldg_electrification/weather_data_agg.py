@@ -292,18 +292,21 @@ def dark_fractions(puma, puma_data, year):
     return sun_df["dark_hour_frac"]
 
 
-def generate_dark_fracs(year, state_list):
+def generate_dark_fracs(year, directory):
     """Generate puma level hourly time series of darkness fractions for all pumas within a state
 
     :param int year: year of desired dark fractions
-    :param list state_list: states for csv's to be generated
+    :param str directory: path to local root directory for weather data
 
     :export: (*csv*) -- statewide hourly dark fractions for every puma
     """
 
+    # Create folder to store dark_frac output if it doesn"t yet exist
+    os.makedirs(os.path.join(directory, "pumas", "dark_frac"), exist_ok=True)
+
     puma_data = pd.read_csv("data/puma_data.csv", index_col="puma")
 
-    for state in state_list:
+    for state in const.state_list:
         puma_data_it = puma_data[puma_data["state"] == state]
         puma_dark_frac = pd.DataFrame(columns=list(puma_data_it.index))
 
@@ -311,7 +314,9 @@ def generate_dark_fracs(year, state_list):
             puma_dark_frac[i] = dark_fractions(i, puma_data, year)
 
         puma_dark_frac.to_csv(
-            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/dark_frac/dark_frac_pumas_{state}_{year}.csv",
+            os.path.join(
+                directory, "pumas", "dark_frac", f"dark_frac_pumas_{state}_{year}.csv"
+            ),
             index=False,
         )
 
@@ -333,16 +338,19 @@ def t_to_twb(temp_values, dwpt_values, press_values):
     ]
 
 
-def generate_wetbulb_temps(year, state_list):
+def generate_wetbulb_temps(year, directory):
     """Generate puma level hourly time series of wetbulb temperatures for all pumas within a state
 
     :param int year: year of desired dark fractions
-    :param list state_list: states for csv's to be generated
+    :param str directory: path to local root directory for weather data
 
     :export: (*csv*) -- statewide hourly wetbulb temperatures for every puma
     """
 
-    for state in state_list:
+    # Create folder to store dark_frac output if it doesn"t yet exist
+    os.makedirs(os.path.join(directory, "pumas", "temps_wetbulb"), exist_ok=True)
+
+    for state in const.state_list:
         temps = pd.read_csv(
             f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps/temps_pumas_{state}_{year}.csv"
         )
@@ -356,59 +364,11 @@ def generate_wetbulb_temps(year, state_list):
         temps_wetbulb = temps.apply(lambda x: t_to_twb(x, dwpts[x.name], press[x.name]))
 
         temps_wetbulb.to_csv(
-            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps_wetbulb/temps_wetbulb_pumas_{state}_{year}.csv",
+            os.path.join(
+                directory,
+                "pumas",
+                "temps_wetbulb",
+                f"temps_wetbulb_pumas_{state}_{year}.csv",
+            ),
             index=False,
         )
-
-
-state_list = [
-    "AL",
-    "AZ",
-    "AR",
-    "CA",
-    "CO",
-    "CT",
-    "DE",
-    "DC",
-    "FL",
-    "GA",
-    "ID",
-    "IL",
-    "IN",
-    "IA",
-    "KS",
-    "KY",
-    "LA",
-    "ME",
-    "MD",
-    "MA",
-    "MI",
-    "MN",
-    "MS",
-    "MO",
-    "MT",
-    "NE",
-    "NV",
-    "NH",
-    "NJ",
-    "NM",
-    "NY",
-    "NC",
-    "ND",
-    "OH",
-    "OK",
-    "OR",
-    "PA",
-    "RI",
-    "SC",
-    "SD",
-    "TN",
-    "TX",
-    "UT",
-    "VT",
-    "VA",
-    "WA",
-    "WV",
-    "WI",
-    "WY",
-]
