@@ -315,13 +315,10 @@ def generate_dark_fracs(year, directory):
 
         puma_dark_frac.to_csv(
             os.path.join(
-                directory,
-                "pumas",
-                "dark_frac",
-                f"dark_frac_pumas_{state}_{year}.csv"
-                ),
-                index=False,
-            )
+                directory, "pumas", "dark_frac", f"dark_frac_pumas_{state}_{year}.csv"
+            ),
+            index=False,
+        )
 
 
 def t_to_twb(temp_values, dwpt_values, press_values):
@@ -365,13 +362,13 @@ def generate_wetbulb_temps(year, directory):
         )
 
         temps_wetbulb = temps.apply(lambda x: t_to_twb(x, dwpts[x.name], press[x.name]))
-        
+
         temps_wetbulb.to_csv(
             os.path.join(
                 directory,
                 "pumas",
                 "temps_wetbulb",
-                f"temps_wetbulb_pumas_{state}_{year}.csv"
-                ),
-                index=False,
-            )
+                f"temps_wetbulb_pumas_{state}_{year}.csv",
+            ),
+            index=False,
+        )
