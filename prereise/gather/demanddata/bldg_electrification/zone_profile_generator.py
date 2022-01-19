@@ -1,10 +1,10 @@
+import geopandas as gpd
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import geopandas as gpd
-from pandas.tseries.holiday import USFederalHolidayCalendar as calendar
+from pandas.tseries.holiday import USFederalHolidayCalendar as calendar  # noqa: N813
 from scipy.stats import linregress
 from sklearn.linear_model import LinearRegression
-import matplotlib.pyplot as plt
 
 
 def bkpt_scale(df, num_points, bkpt, heat_cool):
@@ -235,7 +235,7 @@ def hourly_load_fit(load_temp_df):
                 load_temp_hr = load_temp_df[
                     (load_temp_df["hour_local"] == i)
                     & (load_temp_df["weekday"] < 5)
-                    & (load_temp_df["holiday"] == False)
+                    & ~load_temp_df["holiday"]  # boolean column
                 ].reset_index()
                 numpoints = daily_points * 5
             elif wk_wknd == "wknd":
@@ -243,7 +243,7 @@ def hourly_load_fit(load_temp_df):
                     (load_temp_df["hour_local"] == i)
                     & (
                         (load_temp_df["weekday"] >= 5)
-                        | (load_temp_df["holiday"] == True)
+                        | load_temp_df["holiday"]  # boolean column
                     )
                 ].reset_index()
                 numpoints = daily_points * 2
@@ -328,14 +328,14 @@ def hourly_load_fit(load_temp_df):
                 wk_graph = load_temp_df[
                     (load_temp_df["hour_local"] == i)
                     & (load_temp_df["weekday"] < 5)
-                    & (load_temp_df["holiday"] == False)
+                    & ~load_temp_df["holiday"]  # boolean column
                 ]
             else:
                 wk_graph = load_temp_df[
                     (load_temp_df["hour_local"] == i)
                     & (
                         (load_temp_df["weekday"] >= 5)
-                        | (load_temp_df["holiday"] == True)
+                        | load_temp_df["holiday"]  # boolean column
                     )
                 ]
 
@@ -482,7 +482,7 @@ def temp_to_energy(temp_series, hourly_fits_df, db_wb_fit):
 
     wk_wknd = (
         "wk"
-        if temp_series["weekday"] < 5 and temp_series["holiday"] == False
+        if temp_series["weekday"] < 5 and ~temp_series["holiday"]  # boolean value
         else "wknd"
     )
 
@@ -600,7 +600,9 @@ def main(zone_name, zone_name_shp, load_year, year):
     hourly_fits_df, db_wb_fit = hourly_load_fit(temp_df_load_year)
     hourly_fits_df.to_csv(f"dayhour_fits/{zone_name}_dayhour_fits_{load_year}.csv")
 
-    zone_profile_load_MWh = pd.DataFrame({"hour_utc": list(range(len(hours_utc)))})
+    zone_profile_load_MWh = pd.DataFrame(  # noqa: N806
+        {"hour_utc": list(range(len(hours_utc)))}
+    )
 
     temp_df, stats = zonal_data(puma_data_zone, hours_utc)
 
@@ -618,7 +620,7 @@ def main(zone_name, zone_name_shp, load_year, year):
         energy_list.apply(lambda x: x[2]),
         energy_list.apply(lambda x: sum(x)),
     )
-    zone_profile_load_MWh = zone_profile_load_MWh.set_index("hour_utc")
+    zone_profile_load_MWh.set_index("hour_utc", inplace=True)
     zone_profile_load_MWh.to_csv(f"Profiles/{zone_name}_profile_load_mw_{year}.csv")
 
     (

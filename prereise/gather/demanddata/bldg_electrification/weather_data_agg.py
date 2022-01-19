@@ -9,10 +9,15 @@ import os
 import cdsapi
 import numpy as np
 import pandas as pd
+import psychrolib
 import xarray as xr
+from dateutil import tz
 from scipy.spatial import cKDTree
+from suntime import Sun
 
 from prereise.gather.demanddata.bldg_electrification import const
+
+psychrolib.SetUnitSystem(psychrolib.SI)
 
 variable_names = {
     "temp": {"era5": "2m_temperature", "nc": "t2m"},
@@ -46,7 +51,7 @@ def era5_download(years, directory, variable="temp"):
     if not hasattr(years, "__iter__"):
         years = [years]
 
-    # Error if 'years' includes any years prior to 1950
+    # Error if "years" includes any years prior to 1950
     if min(years) < 1950:
         raise ValueError("Input years must be 1950 or later")
 
@@ -63,7 +68,7 @@ def era5_download(years, directory, variable="temp"):
             "cdsapi is not configured properly, see https://cds.climate.copernicus.eu/api-how-to"
         )
 
-    # Create folder to store data for given variable if it doesn't yet exist
+    # Create folder to store data for given variable if it doesn"t yet exist
     os.makedirs(os.path.join(directory, variable), exist_ok=True)
 
     for year in years:
@@ -102,7 +107,7 @@ def create_era5_pumas(
     :param pandas.Series tract_puma_mapping: tract to puma mapping.
     :param pandas.Series tract_pop: population, indexed by tract.
     :param pandas.DataFrame tract_lat_lon: data frame, indexed by tract, with columns
-        'state', 'lat', and 'lon'.
+        "state", "lat", and "lon".
     :param str directory: path to root directory for ERA5 downloads (not including variable name)
     :param str: variable to produce
         temp {Default} -- dry bulb temperataure, corresponds to ERA5 variable "2m_temperature"
@@ -151,7 +156,7 @@ def create_era5_pumas(
     else:
         print("Confirmed: All required ERA5 input files present")
 
-    # Create folder to store data for given variable if it doesn't yet exist
+    # Create folder to store data for given variable if it doesn"t yet exist
     os.makedirs(os.path.join(directory, "pumas", f"{variable}s"), exist_ok=True)
 
     # Combine tract-level data into single data frame
@@ -214,3 +219,196 @@ def create_era5_pumas(
                 ),
                 index=False,
             )
+
+
+def dark_fractions(puma, puma_data, year):
+    """Compute annual time series of fraction of each hour that is dark for a given puma
+
+    :param str puma: puma name
+    :param pandas.DataFrame puma_data: puma data for lat, long, and timezone
+    :param int year: year of desired dark fractions
+
+    :return: (*list*) -- hourly dark fractions for the year
+    """
+
+    latitude = puma_data.loc[puma, "latitude"]
+    longitude = puma_data.loc[puma, "longitude"]
+
+    puma_timezone = puma_data.loc[puma, "timezone"]
+    hours_local = pd.date_range(
+        start=f"{year}-01-01", end=f"{year+1}-01-01", freq="H", tz="UTC"
+    )[:-1].tz_convert(puma_timezone)
+
+    sun = Sun(latitude, longitude)
+
+    sunrise = pd.Series(hours_local).apply(
+        lambda x: sun.get_local_sunrise_time(x, local_time_zone=tz.gettz(puma_timezone))
+    )
+    sunset = pd.Series(hours_local).apply(
+        lambda x: sun.get_local_sunset_time(x, local_time_zone=tz.gettz(puma_timezone))
+    )
+
+    sun_df = pd.DataFrame(
+        {"sunrise": sunrise, "sunset": sunset, "hour_local": hours_local.hour}
+    )
+
+    sun_df["sunrise_hour"] = sun_df["sunrise"].apply(lambda x: x.hour)
+    sun_df["sunset_hour"] = sun_df["sunset"].apply(lambda x: x.hour)
+
+    sun_df["sunrise_dark_frac"] = sun_df["sunrise"].apply(lambda x: x.minute / 60)
+    sun_df["sunset_dark_frac"] = sun_df["sunset"].apply(lambda x: 1 - x.minute / 60)
+
+    def dark_hour(local, sunrise, sunset, sunrise_frac, sunset_frac):
+        """Return fraction of hour that is dark. 0 if completely light, 1 if completely dark
+
+        :param pandas.DateTime local: local hour
+        :param pandas.DateTime sunrise: local sunrise time
+        :param pandas.DateTime sunset: local sunset time
+        :param float sunrise_frac: fraction of the day's sunrise hour that is dark
+        :param float sunset_frac: fraction of the day's sunset hour that is dark
+
+        :return: (*float*) -- hour darkness fraction
+        """
+        if local == sunrise:
+            return sunrise_frac
+        elif local == sunset:
+            return sunset_frac
+        elif local > sunrise and local < sunset:
+            return 0
+        else:
+            return 1
+
+    sun_df["dark_hour_frac"] = sun_df.apply(
+        lambda x: dark_hour(
+            x["hour_local"],
+            x["sunrise_hour"],
+            x["sunset_hour"],
+            x["sunrise_dark_frac"],
+            x["sunset_dark_frac"],
+        ),
+        axis=1,
+    )
+
+    return sun_df["dark_hour_frac"]
+
+
+def generate_dark_fracs(year, state_list):
+    """Generate puma level hourly time series of darkness fractions for all pumas within a state
+
+    :param int year: year of desired dark fractions
+    :param list state_list: states for csv's to be generated
+
+    :export: (*csv*) -- statewide hourly dark fractions for every puma
+    """
+
+    puma_data = pd.read_csv("data/puma_data.csv", index_col="puma")
+
+    for state in state_list:
+        puma_data_it = puma_data[puma_data["state"] == state]
+        puma_dark_frac = pd.DataFrame(columns=list(puma_data_it.index))
+
+        for i in list(puma_dark_frac.columns):
+            puma_dark_frac[i] = dark_fractions(i, puma_data, year)
+
+        puma_dark_frac.to_csv(
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/dark_frac/dark_frac_pumas_{state}_{year}.csv",
+            index=False,
+        )
+
+
+def t_to_twb(temp_values, dwpt_values, press_values):
+    """Compute wetbulb temperature from drybulb, dewpoint, and pressure
+
+    :param list temp_values: drybulb temperatures, C
+    :param list dwpt_values: dewpoint temperatures, C
+    :param list press_values: pressures, Pa
+
+    :return: (*list*) -- wetbulb temperatures
+    """
+    return [
+        psychrolib.GetTWetBulbFromTDewPoint(
+            temp_values[i], min(temp_values[i], dwpt_values[i]), press_values[i]
+        )
+        for i in range(len(dwpt_values))
+    ]
+
+
+def generate_wetbulb_temps(year, state_list):
+    """Generate puma level hourly time series of wetbulb temperatures for all pumas within a state
+
+    :param int year: year of desired dark fractions
+    :param list state_list: states for csv's to be generated
+
+    :export: (*csv*) -- statewide hourly wetbulb temperatures for every puma
+    """
+
+    for state in state_list:
+        temps = pd.read_csv(
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps/temps_pumas_{state}_{year}.csv"
+        )
+        dwpts = pd.read_csv(
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/dewpoints/dewpts_pumas_{state}_{year}.csv"
+        )
+        press = pd.read_csv(
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/press/press_pumas_{state}_{year}.csv"
+        )
+
+        temps_wetbulb = temps.apply(lambda x: t_to_twb(x, dwpts[x.name], press[x.name]))
+
+        temps_wetbulb.to_csv(
+            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/temps_wetbulb/temps_wetbulb_pumas_{state}_{year}.csv",
+            index=False,
+        )
+
+
+state_list = [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY",
+]
