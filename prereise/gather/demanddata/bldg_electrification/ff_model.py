@@ -32,7 +32,7 @@ def calculate_state_slopes(puma_data, year=const.base_year):
     hours_in_month = dti.month.value_counts()
 
     # Load in historical fossil fuel usage data for input/base year
-    # data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
     ng_usage_data = {
         clas: pd.read_csv(
             os.path.join(data_dir, f"ng_monthly_mmbtu_{year}_{clas}.csv"), index_col=0
@@ -311,7 +311,7 @@ def adjust_puma_slopes(
             puma_data.loc[temp_diff.columns, hd_col_names[clas]] = temp_diff.sum()
 
     # Load in state groups consistent with building area scale adjustments
-    # data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
     area_scale = {
         clas: pd.read_csv(
             os.path.join(data_dir, f"area_scale_{clas}.csv"), index_col=False
