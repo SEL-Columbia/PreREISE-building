@@ -292,13 +292,17 @@ def dark_fractions(puma, puma_data, year):
     return sun_df["dark_hour_frac"]
 
 
-def generate_dark_fracs(year):
+def generate_dark_fracs(year, directory):
     """Generate puma level hourly time series of darkness fractions for all pumas within a state
 
     :param int year: year of desired dark fractions
+    :param str directory: path to local root directory for weather data
 
     :export: (*csv*) -- statewide hourly dark fractions for every puma
     """
+
+    # Create folder to store dark_frac output if it doesn"t yet exist
+    os.makedirs(os.path.join(directory, "pumas", "dark_frac"), exist_ok=True)
 
     puma_data = pd.read_csv("data/puma_data.csv", index_col="puma")
 
@@ -310,9 +314,13 @@ def generate_dark_fracs(year):
             puma_dark_frac[i] = dark_fractions(i, puma_data, year)
 
         puma_dark_frac.to_csv(
-            f"https://besciences.blob.core.windows.net/datasets/bldg_el/pumas/dark_frac/dark_frac_pumas_{state}_{year}.csv",
-            index=False,
-        )
+            os.path.join(
+                directory,
+                "pumas",
+                "dark_frac",
+                f"dark_frac_pumas_{state}_{year}.csv"
+                )
+            )
 
 
 def t_to_twb(temp_values, dwpt_values, press_values):
