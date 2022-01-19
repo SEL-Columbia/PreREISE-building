@@ -73,26 +73,35 @@ def aggregate_puma_df(
 
     # Compute scalar for GBS area to base year area correspondingg to RECS/CBECS
     # and assuming a constant annual growth rate
-    resscales["area_scalar"] = resscales[f"RECS{const.recs_date_1}"]
-    * (
-        (resscales[f"RECS{const.recs_date_2}"] / resscales[f"RECS{const.recs_date_1}"])
-        ** (
-            (const.base_year - const.recs_date_1)
-            / (const.recs_date_2 - const.recs_date_1)
+    resscales["area_scalar"] = (
+        resscales[f"RECS{const.recs_date_1}"]
+        * (
+            (
+                resscales[f"RECS{const.recs_date_2}"]
+                / resscales[f"RECS{const.recs_date_1}"]
+            )
+            ** (
+                (const.base_year - const.recs_date_1)
+                / (const.recs_date_2 - const.recs_date_1)
+            )
         )
-    ) / resscales["GBS"]
+        / resscales["GBS"]
+    )
 
-    comscales["area_scalar"] = comscales[f"CBECS{const.cbecs_date_1}"]
-    * (
-        (
-            comscales[f"CBECS{const.cbecs_date_2}"]
-            / comscales[f"CBECS{const.cbecs_date_1}"]
+    comscales["area_scalar"] = (
+        comscales[f"CBECS{const.cbecs_date_1}"]
+        * (
+            (
+                comscales[f"CBECS{const.cbecs_date_2}"]
+                / comscales[f"CBECS{const.cbecs_date_1}"]
+            )
+            ** (
+                (const.base_year - const.cbecs_date_1)
+                / (const.cbecs_date_2 - const.cbecs_date_1)
+            )
         )
-        ** (
-            (const.base_year - const.cbecs_date_1)
-            / (const.cbecs_date_2 - const.cbecs_date_1)
-        )
-    ) / comscales["GBS"]
+        / comscales["GBS"]
+    )
 
     # Scale puma area from gbs to base year
     for state in const.state_list:
