@@ -156,8 +156,7 @@ def scale_fuel_fractions(hh_fuels, puma_df, year=const.base_year):
         uselist = ["sh", "dhw", "other"] if c == "res" else ["sh", "dhw", "cook"]
         for u in uselist:
             area_fraction_targets = pd.read_csv(
-                os.path.join(data_dir, f"frac_target_{u}_{c}.csv"),
-                index_col=0,
+                os.path.join(data_dir, f"frac_target_{u}_{c}.csv"), index_col=0,
             )
             down_scale = area_fraction_targets / area_fractions
             up_scale = (area_fraction_targets - area_fractions) / (1 - area_fractions)
