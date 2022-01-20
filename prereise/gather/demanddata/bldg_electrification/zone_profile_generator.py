@@ -410,7 +410,7 @@ def hourly_load_fit(load_temp_df):
             plt.xlabel("Temp (°C)")
             plt.ylabel("Load (MW)")
             plt.savefig(
-                f"dayhour_fits/dayhour_fits_graphs/{zone_name}_hour_{i}_{wk_wknd}_{load_year}.png"
+                f"dayhour_fits/dayhour_fits_graphs/{zone_name}_hour_{i}_{wk_wknd}_{base_year}.png"
             )
 
             mrae_heat = np.mean(
@@ -575,7 +575,7 @@ def plot_profile(profile, actual):
     )
 
 
-def main(zone_name, zone_name_shp, load_year, year):
+def main(zone_name, zone_name_shp, base_year, year):
     """Run profile generator for one zone for one year.
 
     :param str zone_name: name of load zone used to save profile.
@@ -585,8 +585,8 @@ def main(zone_name, zone_name_shp, load_year, year):
     zone_load = pd.read_csv(
         f"https://besciences.blob.core.windows.net/datasets/bldg_el/zone_loads_{year}/{zone_name}_demand_{year}_UTC.csv"
     )["demand.mw"]
-    hours_utc_load_year = pd.date_range(
-        start=f"{load_year}-01-01", end=f"{load_year+1}-01-01", freq="H", tz="UTC"
+    hours_utc_base_year = pd.date_range(
+        start=f"{base_year}-01-01", end=f"{base_year+1}-01-01", freq="H", tz="UTC"
     )[:-1]
 
     hours_utc = pd.date_range(
@@ -595,12 +595,12 @@ def main(zone_name, zone_name_shp, load_year, year):
 
     puma_data_zone = zone_shp_overlay(zone_name_shp)
 
-    temp_df_load_year, stats_load_year = zonal_data(puma_data_zone, hours_utc_load_year)
+    temp_df_base_year, stats_base_year = zonal_data(puma_data_zone, hours_utc_base_year)
 
-    temp_df_load_year["load_mw"] = zone_load
+    temp_df_base_year["load_mw"] = zone_load
 
-    hourly_fits_df, db_wb_fit = hourly_load_fit(temp_df_load_year)
-    hourly_fits_df.to_csv(f"dayhour_fits/{zone_name}_dayhour_fits_{load_year}.csv")
+    hourly_fits_df, db_wb_fit = hourly_load_fit(temp_df_base_year)
+    hourly_fits_df.to_csv(f"dayhour_fits/{zone_name}_dayhour_fits_{base_year}.csv")
 
     zone_profile_load_MWh = pd.DataFrame(  # noqa: N806
         {"hour_utc": list(range(len(hours_utc)))}
@@ -639,9 +639,11 @@ def main(zone_name, zone_name_shp, load_year, year):
 
 
 if __name__ == "__main__":
-    # Constants to be used when running this file as a script
+    # Use base_year for model fitting
+    base_year = const.base_year
+    
+    # Weather year to produce load profiles
     year = 2019
-    load_year = 2019
 
     zone_names = [
         "NYIS-ZONA",
@@ -707,4 +709,4 @@ if __name__ == "__main__":
 
     for i in range(len(zone_names)):
         zone_name, zone_name_shp = zone_names[i], zone_name_shps[i]
-        main(zone_name, zone_name_shp, load_year, year)
+        main(zone_name, zone_name_shp, base_year, year)
