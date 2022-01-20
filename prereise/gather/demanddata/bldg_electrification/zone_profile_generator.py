@@ -6,6 +6,8 @@ from pandas.tseries.holiday import USFederalHolidayCalendar as calendar  # noqa:
 from scipy.stats import linregress
 from sklearn.linear_model import LinearRegression
 
+from prereise.gather.demanddata.bldg_electrification import const
+
 
 def bkpt_scale(df, num_points, bkpt, heat_cool):
     """Adjust heating or cooling breakpoint to ensure there are enough data points to fit.
@@ -86,55 +88,55 @@ def zonal_data(puma_data, hours_utc):
         set(list(puma_data["timezone"])), key=list(puma_data["timezone"]).count
     )
 
-    puma_data_year = 2010
+    base_year = const.base_year
 
     stats = pd.Series(
         data=[
             sum(puma_data["pop"]),
-            sum(puma_data[f"res_area_{puma_data_year}_m2"]),
-            sum(puma_data[f"com_area_{puma_data_year}_m2"]),
+            sum(puma_data[f"res_area_{base_year}_m2"]),
+            sum(puma_data[f"com_area_{base_year}_m2"]),
             sum(puma_data["ind_area_gbs_m2"]),
             sum(
-                puma_data[f"res_area_{puma_data_year}_m2"]
-                * puma_data[f"frac_elec_sh_res_{puma_data_year}"]
+                puma_data[f"res_area_{base_year}_m2"]
+                * puma_data[f"frac_elec_sh_res_{base_year}"]
             )
-            / sum(puma_data[f"res_area_{puma_data_year}_m2"]),
+            / sum(puma_data[f"res_area_{base_year}_m2"]),
             sum(
-                puma_data[f"res_area_{puma_data_year}_m2"] * puma_data["AC_penetration"]
+                puma_data[f"res_area_{base_year}_m2"] * puma_data["AC_penetration"]
             )
-            / sum(puma_data[f"res_area_{puma_data_year}_m2"]),
+            / sum(puma_data[f"res_area_{base_year}_m2"]),
             sum(
-                puma_data[f"com_area_{puma_data_year}_m2"]
-                * puma_data[f"frac_elec_sh_com_{puma_data_year}"]
+                puma_data[f"com_area_{base_year}_m2"]
+                * puma_data[f"frac_elec_sh_com_{base_year}"]
             )
-            / sum(puma_data[f"com_area_{puma_data_year}_m2"]),
+            / sum(puma_data[f"com_area_{base_year}_m2"]),
             sum(
-                puma_data[f"res_area_{puma_data_year}_m2"]
-                * puma_data[f"frac_elec_dhw_res_{puma_data_year}"]
+                puma_data[f"res_area_{base_year}_m2"]
+                * puma_data[f"frac_elec_dhw_res_{base_year}"]
             )
-            / sum(puma_data[f"res_area_{puma_data_year}_m2"]),
+            / sum(puma_data[f"res_area_{base_year}_m2"]),
             sum(
-                puma_data[f"com_area_{puma_data_year}_m2"]
-                * puma_data[f"frac_elec_dhw_com_{puma_data_year}"]
+                puma_data[f"com_area_{base_year}_m2"]
+                * puma_data[f"frac_elec_dhw_com_{base_year}"]
             )
-            / sum(puma_data[f"com_area_{puma_data_year}_m2"]),
+            / sum(puma_data[f"com_area_{base_year}_m2"]),
             sum(
-                puma_data[f"res_area_{puma_data_year}_m2"]
-                * puma_data[f"frac_elec_other_res_{puma_data_year}"]
+                puma_data[f"res_area_{base_year}_m2"]
+                * puma_data[f"frac_elec_other_res_{base_year}"]
             )
-            / sum(puma_data[f"res_area_{puma_data_year}_m2"]),
+            / sum(puma_data[f"res_area_{base_year}_m2"]),
             sum(
-                puma_data[f"com_area_{puma_data_year}_m2"]
-                * puma_data[f"frac_elec_cook_com_{puma_data_year}"]
+                puma_data[f"com_area_{base_year}_m2"]
+                * puma_data[f"frac_elec_cook_com_{base_year}"]
             )
-            / sum(puma_data[f"com_area_{puma_data_year}_m2"]),
+            / sum(puma_data[f"com_area_{base_year}_m2"]),
             sum(
-                puma_data[f"hdd65_normals_{puma_data_year}"]
+                puma_data["hdd65_normals"]
                 * puma_data["pop"]
                 / sum(puma_data["pop"])
             ),
             sum(
-                puma_data[f"cdd65_normals_{puma_data_year}"]
+                puma_data["cdd65_normals"]
                 * puma_data["pop"]
                 / sum(puma_data["pop"])
             ),
