@@ -2,6 +2,7 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import os
 from pandas.tseries.holiday import USFederalHolidayCalendar as calendar  # noqa: N813
 from scipy.stats import linregress
 from sklearn.linear_model import LinearRegression
@@ -220,7 +221,7 @@ def zonal_data(puma_data, hours_utc):
     return temp_df, stats
 
 
-def hourly_load_fit(load_temp_df):
+def hourly_load_fit(load_temp_df, plot_boolean):
     """Fit hourly heating, cooling, and baseload functions to load data
 
     :param pandas.DataFrame load_temp_df: hourly load and temperature data
@@ -322,10 +323,8 @@ def hourly_load_fit(load_temp_df):
             )
 
             t_bph = -i_cool / s_cool_db if -i_cool / s_cool_db > t_bph else t_bph
-
-            # Generate hourly fit plot
-            plt.rcParams.update({"font.size": 20})
-            fig, ax = plt.subplots(figsize=(20, 10))
+            
+            #
             if wk_wknd == "wk":
                 wk_graph = load_temp_df[
                     (load_temp_df["hour_local"] == i)
@@ -344,8 +343,6 @@ def hourly_load_fit(load_temp_df):
             load_temp_hr_cool_func = wk_graph[
                 (wk_graph["temp_c"] < t_bph) & (wk_graph["temp_c"] > t_bpc)
             ].reset_index()
-
-            plt.scatter(wk_graph["temp_c"], wk_graph["load_mw"], color="black")
 
             heat_eqn = (
                 load_temp_hr_heat["temp_c"] * s_heat
@@ -397,21 +394,32 @@ def hourly_load_fit(load_temp_df):
                 for i in range(len(load_temp_hr_cool_func))
             ]
 
-            plt.scatter(load_temp_hr_heat["temp_c"], heat_eqn, color="red")
-            plt.scatter(load_temp_hr_cool["temp_c"], cool_eqn, color="blue")
-            plt.scatter(load_temp_hr_cool_func["temp_c"], cool_func_eqn, color="green")
+            # Generate hourly fit plot
+            if plot_boolean:
+                plt.rcParams.update({"font.size": 20})
+                fig, ax = plt.subplots(figsize=(20, 10))
+                
+                plt.scatter(wk_graph["temp_c"], wk_graph["load_mw"], color="black")
 
-            plt.title(
-                f"zone {zone_name}, hour {i}, {wk_wknd} \n t_bpc = "
-                + str(round(t_bpc, 2))
-                + "  t_bph = "
-                + str(round(t_bph, 2))
-            )
-            plt.xlabel("Temp (°C)")
-            plt.ylabel("Load (MW)")
-            plt.savefig(
-                f"dayhour_fits/dayhour_fits_graphs/{zone_name}_hour_{i}_{wk_wknd}_{base_year}.png"
-            )
+                
+
+                plt.scatter(load_temp_hr_heat["temp_c"], heat_eqn, color="red")
+                plt.scatter(load_temp_hr_cool["temp_c"], cool_eqn, color="blue")
+                plt.scatter(load_temp_hr_cool_func["temp_c"], cool_func_eqn, color="green")
+
+                plt.title(
+                    f"zone {zone_name}, hour {i}, {wk_wknd} \n t_bpc = "
+                    + str(round(t_bpc, 2))
+                    + "  t_bph = "
+                    + str(round(t_bph, 2))
+                )
+                plt.xlabel("Temp (°C)")
+                plt.ylabel("Load (MW)")
+                if not os.path.exists('./dayhour_fits/dayhour_fits_graphs'):
+                    os.makedirs('./dayhour_fits/dayhour_fits_graphs')
+                plt.savefig(
+                    f"dayhour_fits/dayhour_fits_graphs/{zone_name}_hour_{i}_{wk_wknd}_{base_year}.png"
+                )
 
             mrae_heat = np.mean(
                 [
@@ -530,7 +538,7 @@ def temp_to_energy(temp_series, hourly_fits_df, db_wb_fit):
     return [base_eng, heat_eng, max(cool_eng, 0) + max(mid_cool_eng, 0)]
 
 
-def plot_profile(profile, actual):
+def plot_profile(profile, actual, plot_boolean):
     """Plot profile vs. actual load
 
     :param pandas.Series profile: total profile hourly load
@@ -547,22 +555,25 @@ def plot_profile(profile, actual):
 
     mrae_avg, mrae_max = np.mean(mrae), max(mrae)
 
-    fig, ax = plt.subplots(figsize=(20, 10))
-    plt.plot(list(profile.index), profile - actual)
-    plt.legend(["Profile - Actual"])
-    plt.xlabel("Hour")
-    plt.ylabel("MW Difference")
-    plt.title(
-        "Zone "
-        + zone_name
-        + " Load Comparison \n"
-        + "avg mrae = "
-        + str(round(mrae_avg * 100, 2))
-        + "% \n avg profile load = "
-        + str(round(np.mean(profile), 2))
-        + " MW"
-    )
-    plt.savefig(f"Profiles/Profiles_graphs/{zone_name}_profile_{year}.png")
+    if plot_boolean:
+        fig, ax = plt.subplots(figsize=(20, 10))
+        plt.plot(list(profile.index), profile - actual)
+        plt.legend(["Profile - Actual"])
+        plt.xlabel("Hour")
+        plt.ylabel("MW Difference")
+        plt.title(
+            "Zone "
+            + zone_name
+            + " Load Comparison \n"
+            + "avg mrae = "
+            + str(round(mrae_avg * 100, 2))
+            + "% \n avg profile load = "
+            + str(round(np.mean(profile), 2))
+            + " MW"
+        )
+        if not os.path.exists('./Profiles/Profiles_graphs'):
+                    os.makedirs('./Profiles/Profiles_graphs')
+        plt.savefig(f"Profiles/Profiles_graphs/{zone_name}_profile_{year}.png")
 
     return (
         mrae_avg,
@@ -575,31 +586,32 @@ def plot_profile(profile, actual):
     )
 
 
-def main(zone_name, zone_name_shp, base_year, year):
+def main(zone_name, zone_name_shp, base_year, year, plot_boolean=False):
     """Run profile generator for one zone for one year.
 
     :param str zone_name: name of load zone used to save profile.
     :param str zone_name_shp: name of load zone within shapefile.
     :param int year: profile year to calculate.
     """
+    print(zone_name)
     zone_load = pd.read_csv(
         f"https://besciences.blob.core.windows.net/datasets/bldg_el/zone_loads_{year}/{zone_name}_demand_{year}_UTC.csv"
     )["demand.mw"]
     hours_utc_base_year = pd.date_range(
         start=f"{base_year}-01-01", end=f"{base_year+1}-01-01", freq="H", tz="UTC"
     )[:-1]
-
+    print('d')
     hours_utc = pd.date_range(
         start=f"{year}-01-01", end=f"{year+1}-01-01", freq="H", tz="UTC"
     )[:-1]
 
     puma_data_zone = zone_shp_overlay(zone_name_shp)
-
+    print('e')
     temp_df_base_year, stats_base_year = zonal_data(puma_data_zone, hours_utc_base_year)
-
+    print('f')
     temp_df_base_year["load_mw"] = zone_load
 
-    hourly_fits_df, db_wb_fit = hourly_load_fit(temp_df_base_year)
+    hourly_fits_df, db_wb_fit = hourly_load_fit(temp_df_base_year, plot_boolean)
     hourly_fits_df.to_csv(f"dayhour_fits/{zone_name}_dayhour_fits_{base_year}.csv")
 
     zone_profile_load_MWh = pd.DataFrame(  # noqa: N806
@@ -607,7 +619,7 @@ def main(zone_name, zone_name_shp, base_year, year):
     )
 
     temp_df, stats = zonal_data(puma_data_zone, hours_utc)
-
+    print('a')
     energy_list = zone_profile_load_MWh.hour_utc.apply(
         lambda x: temp_to_energy(temp_df.loc[x], hourly_fits_df, db_wb_fit)
     )
@@ -624,7 +636,7 @@ def main(zone_name, zone_name_shp, base_year, year):
     )
     zone_profile_load_MWh.set_index("hour_utc", inplace=True)
     zone_profile_load_MWh.to_csv(f"Profiles/{zone_name}_profile_load_mw_{year}.csv")
-
+    print('b')
     (
         stats["mrae_avg_%"],
         stats["mrae_max_%"],
@@ -633,8 +645,10 @@ def main(zone_name, zone_name_shp, base_year, year):
         stats["avg_actual_load_mw"],
         stats["max_profile_load_mw"],
         stats["max_actual_load_mw"],
-    ) = plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load)
-
+    ) = plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load, plot_boolean)
+    print('c')
+    if not os.path.exists('./Profiles/Profiles_stats'):
+                os.makedirs('./Profiles/Profiles_stats')
     stats.to_csv(f"Profiles/Profiles_stats/{zone_name}_stats_{year}.csv")
 
 
@@ -644,6 +658,9 @@ if __name__ == "__main__":
     
     # Weather year to produce load profiles
     year = 2019
+
+    # If produce profile plots
+    plot_boolean = False
 
     zone_names = [
         "NYIS-ZONA",
@@ -709,4 +726,4 @@ if __name__ == "__main__":
 
     for i in range(len(zone_names)):
         zone_name, zone_name_shp = zone_names[i], zone_name_shps[i]
-        main(zone_name, zone_name_shp, base_year, year)
+        main(zone_name, zone_name_shp, base_year, year, plot_boolean)
