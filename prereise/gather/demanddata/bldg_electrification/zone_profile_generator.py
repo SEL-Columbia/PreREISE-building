@@ -1,8 +1,8 @@
+import os
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import os
 from pandas.tseries.holiday import USFederalHolidayCalendar as calendar  # noqa: N813
 from scipy.stats import linregress
 from sklearn.linear_model import LinearRegression
