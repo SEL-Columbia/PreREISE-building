@@ -102,9 +102,7 @@ def zonal_data(puma_data, hours_utc):
                 * puma_data[f"frac_elec_sh_res_{base_year}"]
             )
             / sum(puma_data[f"res_area_{base_year}_m2"]),
-            sum(
-                puma_data[f"res_area_{base_year}_m2"] * puma_data["AC_penetration"]
-            )
+            sum(puma_data[f"res_area_{base_year}_m2"] * puma_data["AC_penetration"])
             / sum(puma_data[f"res_area_{base_year}_m2"]),
             sum(
                 puma_data[f"com_area_{base_year}_m2"]
@@ -131,16 +129,8 @@ def zonal_data(puma_data, hours_utc):
                 * puma_data[f"frac_elec_cook_com_{base_year}"]
             )
             / sum(puma_data[f"com_area_{base_year}_m2"]),
-            sum(
-                puma_data["hdd65_normals"]
-                * puma_data["pop"]
-                / sum(puma_data["pop"])
-            ),
-            sum(
-                puma_data["cdd65_normals"]
-                * puma_data["pop"]
-                / sum(puma_data["pop"])
-            ),
+            sum(puma_data["hdd65_normals"] * puma_data["pop"] / sum(puma_data["pop"])),
+            sum(puma_data["cdd65_normals"] * puma_data["pop"] / sum(puma_data["pop"])),
         ],
         index=[
             "pop",
@@ -323,7 +313,7 @@ def hourly_load_fit(load_temp_df, plot_boolean):
             )
 
             t_bph = -i_cool / s_cool_db if -i_cool / s_cool_db > t_bph else t_bph
-            
+
             #
             if wk_wknd == "wk":
                 wk_graph = load_temp_df[
@@ -398,14 +388,14 @@ def hourly_load_fit(load_temp_df, plot_boolean):
             if plot_boolean:
                 plt.rcParams.update({"font.size": 20})
                 fig, ax = plt.subplots(figsize=(20, 10))
-                
-                plt.scatter(wk_graph["temp_c"], wk_graph["load_mw"], color="black")
 
-                
+                plt.scatter(wk_graph["temp_c"], wk_graph["load_mw"], color="black")
 
                 plt.scatter(load_temp_hr_heat["temp_c"], heat_eqn, color="red")
                 plt.scatter(load_temp_hr_cool["temp_c"], cool_eqn, color="blue")
-                plt.scatter(load_temp_hr_cool_func["temp_c"], cool_func_eqn, color="green")
+                plt.scatter(
+                    load_temp_hr_cool_func["temp_c"], cool_func_eqn, color="green"
+                )
 
                 plt.title(
                     f"zone {zone_name}, hour {i}, {wk_wknd} \n t_bpc = "
@@ -415,8 +405,8 @@ def hourly_load_fit(load_temp_df, plot_boolean):
                 )
                 plt.xlabel("Temp (°C)")
                 plt.ylabel("Load (MW)")
-                if not os.path.exists('./dayhour_fits/dayhour_fits_graphs'):
-                    os.makedirs('./dayhour_fits/dayhour_fits_graphs')
+                if not os.path.exists("./dayhour_fits/dayhour_fits_graphs"):
+                    os.makedirs("./dayhour_fits/dayhour_fits_graphs")
                 plt.savefig(
                     f"dayhour_fits/dayhour_fits_graphs/{zone_name}_hour_{i}_{wk_wknd}_{base_year}.png"
                 )
@@ -571,8 +561,8 @@ def plot_profile(profile, actual, plot_boolean):
             + str(round(np.mean(profile), 2))
             + " MW"
         )
-        if not os.path.exists('./Profiles/Profiles_graphs'):
-                    os.makedirs('./Profiles/Profiles_graphs')
+        if not os.path.exists("./Profiles/Profiles_graphs"):
+            os.makedirs("./Profiles/Profiles_graphs")
         plt.savefig(f"Profiles/Profiles_graphs/{zone_name}_profile_{year}.png")
 
     return (
@@ -646,15 +636,15 @@ def main(zone_name, zone_name_shp, base_year, year, plot_boolean=False):
         stats["max_actual_load_mw"],
     ) = plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load, plot_boolean)
 
-    if not os.path.exists('./Profiles/Profiles_stats'):
-                os.makedirs('./Profiles/Profiles_stats')
+    if not os.path.exists("./Profiles/Profiles_stats"):
+        os.makedirs("./Profiles/Profiles_stats")
     stats.to_csv(f"Profiles/Profiles_stats/{zone_name}_stats_{year}.csv")
 
 
 if __name__ == "__main__":
     # Use base_year for model fitting
     base_year = const.base_year
-    
+
     # Weather year to produce load profiles
     year = 2019
 
