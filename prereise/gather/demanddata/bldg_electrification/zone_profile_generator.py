@@ -593,22 +593,21 @@ def main(zone_name, zone_name_shp, base_year, year, plot_boolean=False):
     :param str zone_name_shp: name of load zone within shapefile.
     :param int year: profile year to calculate.
     """
-    print(zone_name)
     zone_load = pd.read_csv(
         f"https://besciences.blob.core.windows.net/datasets/bldg_el/zone_loads_{year}/{zone_name}_demand_{year}_UTC.csv"
     )["demand.mw"]
     hours_utc_base_year = pd.date_range(
         start=f"{base_year}-01-01", end=f"{base_year+1}-01-01", freq="H", tz="UTC"
     )[:-1]
-    print('d')
+
     hours_utc = pd.date_range(
         start=f"{year}-01-01", end=f"{year+1}-01-01", freq="H", tz="UTC"
     )[:-1]
 
     puma_data_zone = zone_shp_overlay(zone_name_shp)
-    print('e')
+
     temp_df_base_year, stats_base_year = zonal_data(puma_data_zone, hours_utc_base_year)
-    print('f')
+
     temp_df_base_year["load_mw"] = zone_load
 
     hourly_fits_df, db_wb_fit = hourly_load_fit(temp_df_base_year, plot_boolean)
@@ -619,7 +618,7 @@ def main(zone_name, zone_name_shp, base_year, year, plot_boolean=False):
     )
 
     temp_df, stats = zonal_data(puma_data_zone, hours_utc)
-    print('a')
+
     energy_list = zone_profile_load_MWh.hour_utc.apply(
         lambda x: temp_to_energy(temp_df.loc[x], hourly_fits_df, db_wb_fit)
     )
@@ -636,7 +635,7 @@ def main(zone_name, zone_name_shp, base_year, year, plot_boolean=False):
     )
     zone_profile_load_MWh.set_index("hour_utc", inplace=True)
     zone_profile_load_MWh.to_csv(f"Profiles/{zone_name}_profile_load_mw_{year}.csv")
-    print('b')
+
     (
         stats["mrae_avg_%"],
         stats["mrae_max_%"],
@@ -646,7 +645,7 @@ def main(zone_name, zone_name_shp, base_year, year, plot_boolean=False):
         stats["max_profile_load_mw"],
         stats["max_actual_load_mw"],
     ) = plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load, plot_boolean)
-    print('c')
+
     if not os.path.exists('./Profiles/Profiles_stats'):
                 os.makedirs('./Profiles/Profiles_stats')
     stats.to_csv(f"Profiles/Profiles_stats/{zone_name}_stats_{year}.csv")
