@@ -216,7 +216,7 @@ def hourly_load_fit(load_temp_df, plot_boolean):
     """Fit hourly heating, cooling, and baseload functions to load data
 
     :param pandas.DataFrame load_temp_df: hourly load and temperature data
-    :param boolean plot_boolean: whether or not create profile plots. 
+    :param boolean plot_boolean: whether or not create profile plots.
 
     :return: (*pandas.DataFrame*) hourly_fits_df -- hourly and week/weekend breakpoints and coefficients for electricity use equations
     :return: (*float*) s_wb_db, i_wb_db -- slope and intercept of fit between dry and wet bulb temperatures of zone
@@ -535,7 +535,7 @@ def plot_profile(profile, actual, plot_boolean):
 
     :param pandas.Series profile: total profile hourly load
     :param pandas.Series actual: zonal hourly load data
-    :param boolean plot_boolean: whether or not create profile plots. 
+    :param boolean plot_boolean: whether or not create profile plots.
 
     :return: (*plot*)
     """
@@ -586,7 +586,7 @@ def main(zone_name, zone_name_shp, base_year, year, plot_boolean=False):
     :param str zone_name_shp: name of load zone within shapefile.
     :param int base_year: data fitting year.
     :param int year: profile year to calculate.
-    :param boolean plot_boolean: whether or not create profile plots. 
+    :param boolean plot_boolean: whether or not create profile plots.
     """
     zone_load = pd.read_csv(
         f"https://besciences.blob.core.windows.net/datasets/bldg_el/zone_loads_{year}/{zone_name}_demand_{year}_UTC.csv"
