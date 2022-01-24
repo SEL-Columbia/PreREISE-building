@@ -406,7 +406,7 @@ def hourly_load_fit(load_temp_df, plot_boolean):
                 )
                 plt.xlabel("Temp (°C)")
                 plt.ylabel("Load (MW)")
-                if not os.path.exists("./dayhour_fits/dayhour_fits_graphs"):
+                if not os.path.isdir("./dayhour_fits/dayhour_fits_graphs"):
                     os.makedirs("./dayhour_fits/dayhour_fits_graphs")
                 plt.savefig(
                     f"dayhour_fits/dayhour_fits_graphs/{zone_name}_hour_{i}_{wk_wknd}_{base_year}.png"
@@ -562,7 +562,7 @@ def plot_profile(profile, actual, plot_boolean):
             + str(round(np.mean(profile), 2))
             + " MW"
         )
-        if not os.path.exists("./Profiles/Profiles_graphs"):
+        if not os.path.isdir("./Profiles/Profiles_graphs"):
             os.makedirs("./Profiles/Profiles_graphs")
         plt.savefig(f"Profiles/Profiles_graphs/{zone_name}_profile_{year}.png")
 
@@ -637,7 +637,7 @@ def main(zone_name, zone_name_shp, base_year, year, plot_boolean=False):
         stats["max_actual_load_mw"],
     ) = plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load, plot_boolean)
 
-    if not os.path.exists("./Profiles/Profiles_stats"):
+    if not os.path.isdir("./Profiles/Profiles_stats"):
         os.makedirs("./Profiles/Profiles_stats")
     stats.to_csv(f"Profiles/Profiles_stats/{zone_name}_stats_{year}.csv")
 
