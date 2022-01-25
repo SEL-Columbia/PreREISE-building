@@ -49,9 +49,17 @@ def zone_shp_overlay(zone_name_shp):
     :return: (*pandas.DataFrame*) puma_data_zone -- puma data of all pumas within zone, including fraction within zone
     """
 
-    shapefile = gpd.GeoDataFrame(gpd.read_file("shapefiles/BA_map.shp"))
+    shapefile = gpd.GeoDataFrame(
+        gpd.read_file(
+            os.path.join(os.path.dirname(__file__), "shapefiles", "BA_map.shp")
+        )
+    )
     zone_shp = shapefile[shapefile["BA"] == zone_name_shp]
-    pumas_shp = gpd.GeoDataFrame(gpd.read_file("shapefiles/pumas_overlay.shp"))
+    pumas_shp = gpd.GeoDataFrame(
+        gpd.read_file(
+            os.path.join(os.path.dirname(__file__), "shapefiles", "pumas_overlay.shp")
+        )
+    )
 
     puma_zone = gpd.overlay(pumas_shp, zone_shp.to_crs("EPSG:4269"))
     puma_zone["area"] = puma_zone["geometry"].to_crs({"proj": "cea"}).area
