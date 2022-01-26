@@ -75,7 +75,10 @@ def zone_shp_overlay(zone_name_shp):
         {"puma": puma_zone["puma"], "frac_in_zone": puma_zone["area_frac"]}
     )
 
-    puma_data = pd.read_csv(os.path.join(os.path.dirname(__file__), "data", "puma_data.csv"), index_col="puma")
+    puma_data = pd.read_csv(
+        os.path.join(os.path.dirname(__file__), "data", "puma_data.csv"),
+        index_col="puma",
+    )
     puma_data_zone = puma_data_zone.join(puma_data, on="puma")
     puma_data_zone = puma_data_zone.set_index("puma")
 
@@ -415,9 +418,19 @@ def hourly_load_fit(load_temp_df, plot_boolean):
                 )
                 plt.xlabel("Temp (°C)")
                 plt.ylabel("Load (MW)")
-                os.makedirs(os.path.join(os.path.dirname(__file__), "dayhour_fits","dayhour_fits_graphs"), exist_ok=True)
+                os.makedirs(
+                    os.path.join(
+                        os.path.dirname(__file__), "dayhour_fits", "dayhour_fits_graphs"
+                    ),
+                    exist_ok=True,
+                )
                 plt.savefig(
-                    os.path.join(os.path.dirname(__file__), "dayhour_fits","dayhour_fits_graphs",f"{zone_name}_hour_{i}_{wk_wknd}_{base_year}.png")
+                    os.path.join(
+                        os.path.dirname(__file__),
+                        "dayhour_fits",
+                        "dayhour_fits_graphs",
+                        f"{zone_name}_hour_{i}_{wk_wknd}_{base_year}.png",
+                    )
                 )
 
             mrae_heat = np.mean(
@@ -571,9 +584,17 @@ def plot_profile(profile, actual, plot_boolean):
             + str(round(np.mean(profile), 2))
             + " MW"
         )
-        os.makedirs(os.path.join(os.path.dirname(__file__), "Profiles","Profiles_graphs"), exist_ok=True)
+        os.makedirs(
+            os.path.join(os.path.dirname(__file__), "Profiles", "Profiles_graphs"),
+            exist_ok=True,
+        )
         plt.savefig(
-            os.path.join(os.path.dirname(__file__), "Profiles","Profiles_graphs",f"{zone_name}_profile_{year}.png")
+            os.path.join(
+                os.path.dirname(__file__),
+                "Profiles",
+                "Profiles_graphs",
+                f"{zone_name}_profile_{year}.png",
+            )
         )
 
     return (
@@ -615,7 +636,13 @@ def main(zone_name, zone_name_shp, base_year, year, plot_boolean=False):
 
     hourly_fits_df, db_wb_fit = hourly_load_fit(temp_df_base_year, plot_boolean)
     os.makedirs(os.path.join(os.path.dirname(__file__), "dayhour_fits"), exist_ok=True)
-    hourly_fits_df.to_csv(os.path.join(os.path.dirname(__file__), "dayhour_fits", f"{zone_name}_dayhour_fits_{base_year}.csv"))
+    hourly_fits_df.to_csv(
+        os.path.join(
+            os.path.dirname(__file__),
+            "dayhour_fits",
+            f"{zone_name}_dayhour_fits_{base_year}.csv",
+        )
+    )
 
     zone_profile_load_MWh = pd.DataFrame(  # noqa: N806
         {"hour_utc": list(range(len(hours_utc)))}
@@ -639,7 +666,13 @@ def main(zone_name, zone_name_shp, base_year, year, plot_boolean=False):
     )
     zone_profile_load_MWh.set_index("hour_utc", inplace=True)
     os.makedirs(os.path.join(os.path.dirname(__file__), "Profiles"), exist_ok=True)
-    zone_profile_load_MWh.to_csv(os.path.join(os.path.dirname(__file__), "Profiles", f"{zone_name}_profile_load_mw_{year}.csv"))
+    zone_profile_load_MWh.to_csv(
+        os.path.join(
+            os.path.dirname(__file__),
+            "Profiles",
+            f"{zone_name}_profile_load_mw_{year}.csv",
+        )
+    )
 
     (
         stats["mrae_avg_%"],
@@ -651,8 +684,18 @@ def main(zone_name, zone_name_shp, base_year, year, plot_boolean=False):
         stats["max_actual_load_mw"],
     ) = plot_profile(zone_profile_load_MWh["total_load_mw"], zone_load, plot_boolean)
 
-    os.makedirs(os.path.join(os.path.dirname(__file__), "Profiles","Profiles_stats"), exist_ok=True)
-    stats.to_csv(os.path.join(os.path.dirname(__file__), "Profiles","Profiles_stats",f"{zone_name}_stats_{year}.csv"))
+    os.makedirs(
+        os.path.join(os.path.dirname(__file__), "Profiles", "Profiles_stats"),
+        exist_ok=True,
+    )
+    stats.to_csv(
+        os.path.join(
+            os.path.dirname(__file__),
+            "Profiles",
+            "Profiles_stats",
+            f"{zone_name}_stats_{year}.csv",
+        )
+    )
 
 
 if __name__ == "__main__":
