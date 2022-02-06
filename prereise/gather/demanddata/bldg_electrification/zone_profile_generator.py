@@ -59,7 +59,8 @@ def zone_shp_overlay(zone_name_shp):
         gpd.read_file(
             os.path.join(os.path.dirname(__file__), "shapefiles", "pumas_overlay.shp")
         )
-    )
+    ).to_crs("EPSG:4269")
+    pumas_shp["area"] = pumas_shp["geometry"].to_crs({"proj": "cea"}).area
 
     puma_zone = gpd.overlay(pumas_shp, zone_shp.to_crs("EPSG:4269"))
     puma_zone["area"] = puma_zone["geometry"].to_crs({"proj": "cea"}).area
