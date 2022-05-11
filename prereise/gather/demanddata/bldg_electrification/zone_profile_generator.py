@@ -299,10 +299,10 @@ def hourly_load_fit(load_temp_df, plot_boolean):
                 lm_dark.coef_[0],
                 lm_dark.intercept_,
             )
-            
+
             if s_heat > 0:
-                s_heat,s_dark, i_heat = 0,s_dark_only,i_heat_dark_only
-                
+                s_heat, s_dark, i_heat = 0, s_dark_only, i_heat_dark_only
+
             if (
                 s_dark < 0
                 or (
@@ -312,7 +312,7 @@ def hourly_load_fit(load_temp_df, plot_boolean):
                 < 0.3
             ):
                 s_dark, s_heat, i_heat = 0, s_heat_only, i_heat_only
-                
+
                 if s_heat > 0:
                     s_dark, s_heat, i_heat = 0, 0, np.mean(load_temp_hr_heat["load_mw"])
 
