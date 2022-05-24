@@ -285,16 +285,10 @@ def hourly_load_fit(load_temp_df, plot_boolean):
             )
 
             lm_dark = LinearRegression().fit(
-                np.array(
-                    [
-                        [
-                            load_temp_hr_heat["hourly_dark_frac"][j],
-                        ]
-                        for j in range(len(load_temp_hr_heat))
-                    ]
-                ),
+                np.expand_dims(load_temp_hr_heat["hourly_dark_frac"], 1),
                 load_temp_hr_heat["load_mw"],
             )
+
             s_dark_only, i_heat_dark_only = (
                 lm_dark.coef_[0],
                 lm_dark.intercept_,
@@ -552,7 +546,7 @@ def temp_to_energy(temp_series, hourly_fits_df, db_wb_fit):
             + s_cool_wb
             * (
                 temp_wb
-                - (db_wb_fit[0] * temp**2 + db_wb_fit[1] * temp + db_wb_fit[2])
+                - (db_wb_fit[0] * temp ** 2 + db_wb_fit[1] * temp + db_wb_fit[2])
             )
             + i_cool
         )
@@ -564,7 +558,7 @@ def temp_to_energy(temp_series, hourly_fits_df, db_wb_fit):
             + s_cool_wb
             * (
                 temp_wb
-                - (db_wb_fit[0] * temp**2 + db_wb_fit[1] * temp + db_wb_fit[2])
+                - (db_wb_fit[0] * temp ** 2 + db_wb_fit[1] * temp + db_wb_fit[2])
             )
             + i_cool
         )
