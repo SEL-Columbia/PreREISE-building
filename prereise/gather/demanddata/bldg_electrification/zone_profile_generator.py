@@ -546,7 +546,7 @@ def temp_to_energy(temp_series, hourly_fits_df, db_wb_fit):
             + s_cool_wb
             * (
                 temp_wb
-                - (db_wb_fit[0] * temp ** 2 + db_wb_fit[1] * temp + db_wb_fit[2])
+                - (db_wb_fit[0] * temp**2 + db_wb_fit[1] * temp + db_wb_fit[2])
             )
             + i_cool
         )
@@ -558,7 +558,7 @@ def temp_to_energy(temp_series, hourly_fits_df, db_wb_fit):
             + s_cool_wb
             * (
                 temp_wb
-                - (db_wb_fit[0] * temp ** 2 + db_wb_fit[1] * temp + db_wb_fit[2])
+                - (db_wb_fit[0] * temp**2 + db_wb_fit[1] * temp + db_wb_fit[2])
             )
             + i_cool
         )
